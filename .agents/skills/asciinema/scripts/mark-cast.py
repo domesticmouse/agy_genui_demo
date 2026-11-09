@@ -82,6 +82,10 @@ def strip_ansi(text: str) -> str:
     return ANSI_ESCAPE_RE.sub("", text)
 
 
+UNREV_REDRAW_RE = re.compile(r"\x1b\[\d*A")
+UNREV_CURSOR_DOWN_RE = re.compile(r"(\x1b\[\d*B\r\x1b\[K)$")
+
+
 def describe_ansi_tags(code: str, data: Any) -> str:
     """
     Return compact diagnostic tags for stdout ('o') events so --inspect and --search
@@ -94,14 +98,11 @@ def describe_ansi_tags(code: str, data: Any) -> str:
     tags: list[str] = []
     if "\x1b[7m" in s and not s.startswith("\x1b[1m\x1b[7m%\x1b[27m"):
         tags.append("REV")
-    elif "\x1b[27m" in s and "\x1b[A" in s:
+    elif "\x1b[27m" in s and UNREV_REDRAW_RE.search(s):
         tags.append("UNREV")
     if "\x1b]2;" in s:
         tags.append("OSC")
     return f"[{','.join(tags)}] " if tags else ""
-
-
-UNREV_CURSOR_DOWN_RE = re.compile(r"(\x1b\[\d*B\r\x1b\[K)$")
 
 
 def advance_past_paste_redraw(
@@ -128,7 +129,7 @@ def advance_past_paste_redraw(
     is_rev_paste = "\x1b[7m" in payload and not payload.startswith(
         "\x1b[1m\x1b[7m%\x1b[27m"
     )
-    is_unrev_redraw = "\x1b[27m" in payload and "\x1b[A" in payload
+    is_unrev_redraw = "\x1b[27m" in payload and bool(UNREV_REDRAW_RE.search(payload))
     if not (is_rev_paste or is_unrev_redraw):
         idx = match_idx
         while idx + 1 < len(events):
@@ -651,7 +652,7 @@ def tighten_paste_delays(
     """
     notes: list[str] = []
     input_clear_re = re.compile(
-        r"^\x1b\[\?2026h(?:\x1b\[\d+D\x1b\[K|\r\n\n\n\x1b\[J\x1b\[3A\x1b\[2C\x1b\[K)"
+        r"^\x1b\[\?2026h(?:\r?(?:\x1b\[\d+A)?(?:\n)*\x1b\[J\x1b\[3A\x1b\[2C\x1b\[K|\r?\x1b\[\d+[CD]\x1b\[K)"
     )
 
     for idx, ev in enumerate(events):
@@ -665,7 +666,7 @@ def tighten_paste_delays(
         )
 
         is_rev = "\x1b[7m" in s and not s.startswith("\x1b[1m\x1b[7m%\x1b[27m")
-        is_unrev = "\x1b[27m" in s and "\x1b[A" in s
+        is_unrev = "\x1b[27m" in s and bool(UNREV_REDRAW_RE.search(s))
         next_is_marker = idx + 1 < len(events) and events[idx + 1][1] == "m"
         prev_is_marker = idx > 0 and events[idx - 1][1] == "m"
         prev_marker_label = (
@@ -691,28 +692,34 @@ def tighten_paste_delays(
         elif (
             "Gemini " in s
             and idx > 0
-            and "Welcome to the"
-            in strip_ansi(
-                str(events[idx - 2][2])
-                if idx >= 2 and len(events[idx - 2]) >= 3
-                else ""
+            and any(
+                "Welcome to the"
+                in strip_ansi(
+                    str(events[idx - k][2])
+                    if idx >= k and len(events[idx - k]) >= 3
+                    else ""
+                )
+                for k in (1, 2, 3, 4)
             )
             and old_dt > pre_paste_dt
         ):
             target_dt = pre_paste_dt
             reason = "agy banner settle"
+        elif prev_is_marker and input_clear_re.match(s) and old_dt > submit_dt:
+            target_dt = submit_dt
+            reason = "agy prompt submit"
+        elif prev_is_marker and "/clear" in prev_marker_label and old_dt > pre_paste_dt:
+            target_dt = pre_paste_dt
+            reason = "agy /clear execution"
+        elif prev_is_marker and old_dt > pre_paste_dt:
+            target_dt = pre_paste_dt
+            reason = "agy post-marker prompt/action start"
         elif next_is_marker and " \x1b[2mG\x1b[m\x1b[2A" in s and old_dt > pre_paste_dt:
             target_dt = pre_paste_dt
             reason = "agy pasted prompt"
         elif next_has_g_badge and old_dt > pre_paste_dt:
             target_dt = pre_paste_dt
             reason = "agy typed prompt start"
-        elif prev_is_marker and "/clear" in prev_marker_label and old_dt > pre_paste_dt:
-            target_dt = pre_paste_dt
-            reason = "agy /clear execution"
-        elif prev_is_marker and input_clear_re.match(s) and old_dt > submit_dt:
-            target_dt = submit_dt
-            reason = "agy prompt submit"
 
         if target_dt is not None:
             set_event_dt(events, version, idx, target_dt)
@@ -996,13 +1003,26 @@ def main() -> int:
                 )
 
     if args.add_event:
-        for idx_str, label in args.add_event:
-            target_idx = int(idx_str)
+        indexed_items = [(int(idx_str), label) for idx_str, label in args.add_event]
+        for target_idx, label in sorted(
+            indexed_items, key=lambda item: item[0], reverse=True
+        ):
+            ev_payload = (
+                str(events[target_idx][2])
+                if 0 <= target_idx < len(events) and len(events[target_idx]) >= 3
+                else ""
+            )
+            is_shell_paste = ("\x1b[7m" in ev_payload or "\x1b[27m" in ev_payload) and not ev_payload.startswith("\x1b[1m\x1b[7m%\x1b[27m")
+            place_idx = (
+                advance_past_paste_redraw(events, target_idx, version)
+                if (is_shell_paste and not args.before and not args.raw_match)
+                else target_idx
+            )
             events, ok = add_event_marker(
-                events, version, target_idx, label, insert_after=not args.before
+                events, version, place_idx, label, insert_after=not args.before
             )
             if ok:
-                print(f"[add-event] + {label!r} at event #{target_idx:04d}")
+                print(f"[add-event] + {label!r} at event #{place_idx:04d}")
             else:
                 print(
                     f"[add-event] WARNING: event #{target_idx} out of range "

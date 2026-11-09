@@ -215,6 +215,9 @@
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
+      max-height: 68px;
+      overflow-y: auto;
+      padding-right: 4px;
     }
     .chapter-pill {
       font-family: var(--font-mono);
@@ -718,6 +721,11 @@
           `<span class="chapter-time">${formatTime(tailSeg.endTime)}</span>`;
         tailBtn.onclick = () => jumpToEnd();
         container.appendChild(tailBtn);
+      }
+
+      const activePill = container.querySelector(".chapter-pill.hit, .chapter-pill.active");
+      if (activePill && typeof activePill.scrollIntoView === "function") {
+        activePill.scrollIntoView({ block: "nearest", inline: "nearest" });
       }
     }
 
