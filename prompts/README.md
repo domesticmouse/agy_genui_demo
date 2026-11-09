@@ -1,0 +1,13 @@
+# Project Conversation Logs (`agy_genui_demo`)
+
+This directory contains per-conversation Markdown logs recording user prompts, interactive Q&A selections, thinking summaries, Antigravity actions/deliverables, and executed commands.
+
+| # | Created (Local) | Session ID | Steps | Document | Initial Prompt |
+| :---: | :--- | :--- | :---: | :--- | :--- |
+| 01 | `2026-11-09 21:10` | `6ee8f6c2` [↗](conversation://6ee8f6c2-c4f9-499a-8b15-c88156684819) | 49 | [01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md](file:///Users/brett/tmp/agy_genui_demo/prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md) | Please build a macOS desktop Markdown chat application in this project using `flutter_mark |
+| 02 | `2026-11-09 21:20` | `8f4aafaf` [↗](conversation://8f4aafaf-21d5-4f03-8317-baca71b7cb79) | 70 | [02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md](file:///Users/brett/tmp/agy_genui_demo/prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md) | Please add the `antigravity` package dependency and integrate it as the backend for the Ma |
+| 03 | `2026-11-09 21:34` | `10ad2b6c` [↗](conversation://10ad2b6c-c2ee-4fed-aeae-d2940571099e) | 175 | [03-10ad2b6c-please-review-this-program-i-m-interested.md](file:///Users/brett/tmp/agy_genui_demo/prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md) | Please review this program. I'm interested in which directory the Antigravity local harnes |
+| 04 | `2026-11-09 22:07` | `ba34877d` [↗](conversation://ba34877d-c6c6-4956-96f2-c4975bb83956) | 507 | [04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md](file:///Users/brett/tmp/agy_genui_demo/prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md) | Please add `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` to this project and integrate A2U |
+| 05 | `2026-11-09 23:24` | `7407df5f` [↗](conversation://7407df5f-c580-4c1c-bf09-c63c545df255) | 75 | [05-7407df5f-please-review-this-codebase.md](file:///Users/brett/tmp/agy_genui_demo/prompts/05-7407df5f-please-review-this-codebase.md) | please review this codebase |
+| 06 | `2026-11-09 23:37` | `7e5e8534` [↗](conversation://7e5e8534a057467540d3cd248b229b19) | 10 | [06-7e5e8534-please-ask-a-multiple-choice-question.md](file:///Users/brett/tmp/agy_genui_demo/prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md) | Please ask a multiple choice question |
+| 07 | `2026-11-09 23:58` | `fd1fed76` [↗](conversation://fd1fed76-7832-4fe5-87e3-7202f1e6fe72) | 4 | [07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md](file:///Users/brett/tmp/agy_genui_demo/prompts/07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md) | Please extract AGY brain transcripts for this directory and record them to a directory |
