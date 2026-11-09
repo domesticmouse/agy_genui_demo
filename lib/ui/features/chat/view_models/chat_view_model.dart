@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../domain/models/chat_models.dart';
 
-/// ViewModel managing macOS Markdown chat threads, per-thread typing state,
-/// automatic thread titling, sidebar collapse state, and Material 3 theme mode.
+/// ViewModel managing macOS Markdown chat threads, per-thread Antigravity
+/// agent streaming state, automatic thread titling, sidebar collapse state,
+/// and Material 3 theme mode.
 class ChatViewModel extends ChangeNotifier {
   ChatViewModel({
     ChatRepository? repository,
-    this.responseDelay = const Duration(milliseconds: 450),
-  }) : _repository = repository ?? const ChatRepository() {
+    this.responseDelay = Duration.zero,
+  }) : _repository = repository ?? ChatRepository() {
     _threads.addAll(_repository.getStarterThreads());
     if (_threads.isNotEmpty) {
       _activeThreadId = _threads.first.id;
@@ -22,14 +23,17 @@ class ChatViewModel extends ChangeNotifier {
   final Duration responseDelay;
 
   final List<ChatThread> _threads = [];
-  final Map<String, Timer> _typingTimers = {};
+  final Map<String, StreamSubscription<String>> _replySubscriptions = {};
+  final Map<String, int> _activeRequestIds = {};
 
   String _activeThreadId = '';
   bool _isSidebarOpen = true;
   bool _isPreviewVisible = false;
   ThemeMode _themeMode = ThemeMode.light;
   int _idCounter = 100;
+  bool _isDisposed = false;
 
+  ChatRepository get repository => _repository;
   List<ChatThread> get threads => List.unmodifiable(_threads);
   String get activeThreadId => _activeThreadId;
   bool get isSidebarOpen => _isSidebarOpen;
@@ -92,9 +96,13 @@ class ChatViewModel extends ChangeNotifier {
     return newThread;
   }
 
-  /// Deletes a conversation thread and ensures a valid active thread remains.
+  /// Deletes a conversation thread, stops its Antigravity agent session, and
+  /// ensures a valid active thread remains.
   void deleteThread(String threadId) {
-    _typingTimers.remove(threadId)?.cancel();
+    _activeRequestIds.remove(threadId);
+    unawaited(_replySubscriptions.remove(threadId)?.cancel());
+    unawaited(_repository.closeThreadSession(threadId));
+
     _threads.removeWhere((t) => t.id == threadId);
     if (_threads.isEmpty) {
       createNewThread();
@@ -130,7 +138,8 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   /// Sends a user Markdown message in the currently active thread, updates the
-  /// thread title automatically if untitled, and triggers per-thread typing.
+  /// thread title automatically if untitled, and streams the Antigravity
+  /// assistant response for that thread.
   void sendMessage(String rawMarkdown) {
     final content = rawMarkdown.trim();
     if (content.isEmpty) return;
@@ -165,44 +174,135 @@ class ChatViewModel extends ChangeNotifier {
     _threads[index] = updatedThread;
     notifyListeners();
 
-    _typingTimers[threadId]?.cancel();
-    _typingTimers[threadId] = Timer(responseDelay, () {
-      _completeAssistantReply(threadId, content);
-    });
+    unawaited(_replySubscriptions.remove(threadId)?.cancel());
+    final requestId = ++_idCounter;
+    final assistantMessageId = 'msg-${++_idCounter}';
+    final buffer = StringBuffer();
+    _activeRequestIds[threadId] = requestId;
+
+    final subscription = _createReplyStream(
+      content,
+      threadId: threadId,
+      threadTitle: updatedTitle,
+    ).listen(
+      (chunk) {
+        if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
+        buffer.write(chunk);
+        _upsertAssistantMessage(
+          threadId: threadId,
+          messageId: assistantMessageId,
+          content: buffer.toString(),
+          isTyping: true,
+        );
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
+        _activeRequestIds.remove(threadId);
+        _replySubscriptions.remove(threadId);
+        final errorMarkdown = buffer.isEmpty
+            ? _formatErrorMarkdown(error)
+            : '$buffer\n\n---\n${_formatErrorMarkdown(error)}';
+        _upsertAssistantMessage(
+          threadId: threadId,
+          messageId: assistantMessageId,
+          content: errorMarkdown,
+          isTyping: false,
+        );
+      },
+      onDone: () {
+        if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
+        _activeRequestIds.remove(threadId);
+        _replySubscriptions.remove(threadId);
+        final finalContent = buffer.isEmpty
+            ? '_No response returned by Antigravity agent._'
+            : buffer.toString();
+        _upsertAssistantMessage(
+          threadId: threadId,
+          messageId: assistantMessageId,
+          content: finalContent,
+          isTyping: false,
+        );
+      },
+    );
+
+    _replySubscriptions[threadId] = subscription;
   }
 
-  void _completeAssistantReply(String threadId, String userPrompt) {
-    _typingTimers.remove(threadId);
+  Stream<String> _createReplyStream(
+    String userPrompt, {
+    required String threadId,
+    required String threadTitle,
+  }) async* {
+    if (responseDelay > Duration.zero) {
+      await Future<void>.delayed(responseDelay);
+    }
+    yield* _repository.streamAssistantReply(
+      userPrompt,
+      threadId: threadId,
+      threadTitle: threadTitle,
+    );
+  }
+
+  void _upsertAssistantMessage({
+    required String threadId,
+    required String messageId,
+    required String content,
+    required bool isTyping,
+  }) {
     final index = _threads.indexWhere((t) => t.id == threadId);
     if (index == -1) return;
 
     final thread = _threads[index];
-    _idCounter++;
-    final replyContent = _repository.buildAssistantReply(
-      userPrompt,
-      threadTitle: thread.title,
-    );
-    final assistantMessage = ChatMessage(
-      id: 'msg-$_idCounter',
-      role: MessageRole.assistant,
-      content: replyContent,
-      timestamp: DateTime.now(),
-    );
+    final messages = List<ChatMessage>.from(thread.messages);
+    final existingIndex = messages.indexWhere((m) => m.id == messageId);
+
+    if (existingIndex == -1) {
+      messages.add(
+        ChatMessage(
+          id: messageId,
+          role: MessageRole.assistant,
+          content: content,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } else {
+      messages[existingIndex] = ChatMessage(
+        id: messageId,
+        role: MessageRole.assistant,
+        content: content,
+        timestamp: messages[existingIndex].timestamp,
+      );
+    }
 
     _threads[index] = thread.copyWith(
-      messages: [...thread.messages, assistantMessage],
+      messages: messages,
       updatedAt: DateTime.now(),
-      isTyping: false,
+      isTyping: isTyping,
     );
     notifyListeners();
   }
 
+  String _formatErrorMarkdown(Object error) {
+    return '''### Antigravity Backend Error
+
+The local Antigravity agent encountered an error while generating a reply:
+
+```text
+$error
+```
+
+> **Tip:** Make sure `GEMINI_API_KEY` is set in your environment (`export GEMINI_API_KEY="your_api_key"`) or passed via `--dart-define=GEMINI_API_KEY=your_api_key`.''';
+  }
+
   @override
   void dispose() {
-    for (final timer in _typingTimers.values) {
-      timer.cancel();
+    _isDisposed = true;
+    _activeRequestIds.clear();
+    for (final subscription in _replySubscriptions.values) {
+      unawaited(subscription.cancel());
     }
-    _typingTimers.clear();
+    _replySubscriptions.clear();
+    unawaited(_repository.dispose());
     super.dispose();
   }
 }
