@@ -16,28 +16,28 @@ A macOS desktop Markdown and A2UI v1.0 generative UI chat application built with
    - **Interactive Clarifying Questions & Parameter Forms**: Supports interactive A2UI v1.0 parameter forms combining `Card`, `Column`, `ChoicePicker` (`mutuallyExclusive` chips and `multipleSelection` checkboxes), `TextField` with client-side validation `checks` (`required`, `length`, `regex`, `numeric`), `Slider`, `CheckBox`, reactive summary `Text` (`formatParameterSummary`), local preset `Button`s (`action.functionCall` -> `setSurfaceData`), and primary submit `Button`s (`action.event`) gated by validation `checks`.
    - **Bidirectional Renderer RPC Functions (`FunctionImplementation` & `RpcHandler`)**: Registers `GetWorkspaceInfoFunction` (`getWorkspaceInfo`), `ListWorkspaceFilesFunction` (`listWorkspaceFiles`), `SetSurfaceDataFunction` (`setSurfaceData`), and `FormatParameterSummaryFunction` (`formatParameterSummary`) with `AllowedCallers.rendererOrAgent` and wires `outboundListener` on each thread's `MessageProcessor` so the agent can call renderer functions (`callRendererFunction` -> `rendererFunctionResponse`) and the renderer can call agent functions (`callAgentFunction` -> `agentFunctionResponse`).
 
-2. **Projects & Working Directory Management (`workspaces`)**
+3. **Projects & Working Directory Management (`workspaces`)**
    - **Project-scoped threads**: Projects group conversation threads and set the explicit working directory (`workspaces: [project.workingDirectory]`) passed to `LocalAgentConfig` for the Antigravity `localharness`.
    - **Project switcher & workspace editor**: Switch between projects, create new projects with custom working directories, or update the active project's working directory from the sidebar (`New Project` / `Edit Project Working Directory`) or the top toolbar workspace badge.
    - **Safe macOS `.app` working directory fallback**: When launched from a terminal (`flutter run -d macos`), the default project uses `Directory.current.absolute.path`. When launched directly as a macOS `.app` bundle from Finder/LaunchServices (where the OS sets `Directory.current` to `/`), `ChatRepository.resolveDefaultWorkingDirectory()` safely falls back to `$HOME` (or `Directory.systemTemp`).
 
-3. **Sandboxed Command Execution & Sandbox-Escape User Review UI**
+4. **Sandboxed Command Execution & Sandbox-Escape User Review UI**
    - **OS-level command sandboxing (`RunCommandConfig(enableSandbox: true)`)**: Enables the `localharness` OS-level command sandbox (`exebox`) so standard `run_command` invocations (`BypassSandbox: false`) run confined to the active project's working directory.
    - **Workspace file containment (`workspaceOnly`)**: Pairs `workspaceOnly(workspaces)` with `allowAll()` so file manipulation tools (`view_file`, `create_file`, `edit_file`) remain strictly confined to the project's working directory while in-sandbox commands are permitted.
    - **Interactive review for sandbox-escaping commands (`askUser` & `auto`)**: Commands that request to escape the sandbox (`BypassSandbox: true`, referencing paths outside the project working directory, or flagged by `auto(handler: ...)`) pause execution and present a **Sandbox Escape Review Required** banner above the composer. The user can inspect the exact command line, project workspace, and reason before choosing **Approve & Run** or **Deny**.
 
-4. **Collapsible macOS Split-View Conversation Sidebar**
+5. **Collapsible macOS Split-View Conversation Sidebar**
    - Toggleable conversation thread sidebar (`Hide Sidebar` / `Show Sidebar`) in the top toolbar.
    - **Per-thread typing & review state**: Each thread tracks its own assistant generation status (`Typing...`) and pending sandbox-escape review badges (`Review required`) independently in both the sidebar and the active conversation view.
    - **Automatic thread titling**: New threads start as `New Thread` and automatically derive a clean, readable title from the first user message (stripping Markdown formatting characters).
    - **Starter projects & threads**: Preloaded with starter projects and rich GitHub-Flavored Markdown conversations showcasing all supported formatting constructs.
 
-5. **Rich Markdown Message Rendering & One-Click Copy**
+6. **Rich Markdown Message Rendering & One-Click Copy**
    - Powered by `flutter_markdown_plus` with `md.ExtensionSet.gitHubFlavored`.
    - Supports headings (`#`–`######`), **bold**, *italic*, ~~strikethrough~~, `inline code`, fenced code blocks (` ``` `), blockquotes (`>`), ordered and unordered lists, and bordered GitHub-style tables.
    - Every message bubble includes a one-click **Copy Markdown** action that copies the raw Markdown source to the system clipboard.
 
-6. **Desktop Markdown Composer**
+7. **Desktop Markdown Composer**
    - **Formatting toolbar**: One-click insertion/wrapping for **Bold**, *Italic*, `Inline Code`, `Code Block`, `List`, and `Blockquote`.
    - **Live Markdown preview toggle**: Real-time `MarkdownBody` preview panel directly above the input field.
    - **Desktop keyboard shortcuts**:
@@ -45,7 +45,7 @@ A macOS desktop Markdown and A2UI v1.0 generative UI chat application built with
      - `Shift + Enter` inserts a newline at the cursor position.
      - **IME composition guard**: Ignores `Enter` key events while an active IME composition region (`TextEditingValue.composing`) is in progress.
 
-7. **Responsive Top Toolbar & Material 3 Theme Switching**
+8. **Responsive Top Toolbar & Material 3 Theme Switching**
    - Adapts seamlessly between wide desktop split-view layouts and compact window widths.
    - One-click **Light / Dark Material 3 theme** toggle.
 

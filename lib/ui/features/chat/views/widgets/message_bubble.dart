@@ -39,6 +39,9 @@ class _MessageBubbleState extends State<MessageBubble> {
   @override
   void didUpdateWidget(covariant MessageBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.message.id != oldWidget.message.id) {
+      _copied = false;
+    }
     if (widget.message.id != oldWidget.message.id ||
         (widget.message.hasParsedParts && !oldWidget.message.hasParsedParts)) {
       _disposeLocalFallbackParser();

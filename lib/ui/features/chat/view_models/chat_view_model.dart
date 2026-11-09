@@ -77,6 +77,9 @@ class ChatViewModel extends ChangeNotifier {
   final Map<String, List<A2uiRendererAction>> _threadActions = {};
   final Map<String, List<RendererToAgentMessage>> _threadOutboundRpcMessages =
       {};
+  final Map<String, List<RendererToAgentMessage>>
+  _pendingAutoForwardRpcMessages = {};
+  final Set<String> _scheduledRpcFlushThreads = {};
 
   final List<PendingCommandReview> _pendingReviews = [];
   final Map<String, Completer<bool>> _reviewCompleters = {};
@@ -224,9 +227,37 @@ class ChatViewModel extends ChangeNotifier {
         .add(message);
     onOutboundRpcMessage?.call(threadId, message);
     if (forwardRpcMessagesToAgent) {
-      sendRpcMessageToAgent(message, threadId: threadId);
+      _enqueueOutboundRpcForForwarding(threadId, message);
     }
     notifyListeners();
+  }
+
+  void _enqueueOutboundRpcForForwarding(
+    String threadId,
+    RendererToAgentMessage message,
+  ) {
+    _pendingAutoForwardRpcMessages
+        .putIfAbsent(threadId, () => <RendererToAgentMessage>[])
+        .add(message);
+    // If an assistant reply stream is currently active on this thread, wait for
+    // the stream to finish (in onDone) before sending the batched RPC response
+    // turn so we do not cancel the in-flight stream.
+    if (_activeRequestIds.containsKey(threadId)) {
+      return;
+    }
+    if (_scheduledRpcFlushThreads.add(threadId)) {
+      scheduleMicrotask(() {
+        _scheduledRpcFlushThreads.remove(threadId);
+        if (_isDisposed || _activeRequestIds.containsKey(threadId)) return;
+        _flushPendingAutoForwardRpcMessages(threadId);
+      });
+    }
+  }
+
+  void _flushPendingAutoForwardRpcMessages(String threadId) {
+    final pending = _pendingAutoForwardRpcMessages.remove(threadId);
+    if (pending == null || pending.isEmpty) return;
+    sendRpcMessagesToAgent(List.unmodifiable(pending), threadId: threadId);
   }
 
   ChatThread _hydrateStarterThread(ChatThread thread) {
@@ -309,6 +340,8 @@ class ChatViewModel extends ChangeNotifier {
     }
     _threadActions.remove(threadId);
     _threadOutboundRpcMessages.remove(threadId);
+    _pendingAutoForwardRpcMessages.remove(threadId);
+    _scheduledRpcFlushThreads.remove(threadId);
     _threadRenderers.remove(threadId)?.dispose();
   }
 
@@ -655,7 +688,7 @@ class ChatViewModel extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
 
-    final shouldAutoTitle = !current.isAutoTitled || current.messages.isEmpty;
+    final shouldAutoTitle = !current.isAutoTitled;
     final updatedTitle = shouldAutoTitle
         ? deriveThreadTitle(content)
         : current.title;
@@ -731,6 +764,17 @@ class ChatViewModel extends ChangeNotifier {
     RendererToAgentMessage message, {
     String? threadId,
   }) {
+    sendRpcMessagesToAgent([message], threadId: threadId);
+  }
+
+  /// Sends one or more outbound A2UI v1.0 [RendererToAgentMessage]s in a single
+  /// batched [RendererToAgentMessagePayload] turn along with the current
+  /// `a2uiRendererDataModel` to the thread's Antigravity agent session.
+  void sendRpcMessagesToAgent(
+    List<RendererToAgentMessage> messages, {
+    String? threadId,
+  }) {
+    if (messages.isEmpty) return;
     final targetThreadId = threadId ?? _activeThreadId;
     if (targetThreadId.isEmpty) return;
     final index = _threads.indexWhere((t) => t.id == targetThreadId);
@@ -746,7 +790,7 @@ class ChatViewModel extends ChangeNotifier {
       version: A2uiProtocolVersion.v1_0,
     );
     final payload = <String, Object?>{
-      'a2ui': RendererToAgentMessagePayload([message]).toJson(),
+      'a2ui': RendererToAgentMessagePayload(messages).toJson(),
       if (dataModel != null) 'metadata': {'a2uiRendererDataModel': dataModel},
     };
 
@@ -827,6 +871,7 @@ class ChatViewModel extends ChangeNotifier {
         if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
         _activeRequestIds.remove(threadId);
         _replySubscriptions.remove(threadId);
+        _pendingAutoForwardRpcMessages.remove(threadId);
         try {
           streamedAnswer.close();
         } on Object catch (_) {}
@@ -867,6 +912,7 @@ class ChatViewModel extends ChangeNotifier {
             hasParsedParts: true,
             isTyping: false,
           );
+          _flushPendingAutoForwardRpcMessages(threadId);
           return;
         }
         streamedAnswer.close();
@@ -878,6 +924,7 @@ class ChatViewModel extends ChangeNotifier {
           hasParsedParts: true,
           isTyping: false,
         );
+        _flushPendingAutoForwardRpcMessages(threadId);
       },
     );
 
@@ -964,6 +1011,8 @@ $error
   void dispose() {
     _isDisposed = true;
     _activeRequestIds.clear();
+    _pendingAutoForwardRpcMessages.clear();
+    _scheduledRpcFlushThreads.clear();
     for (final completer in _reviewCompleters.values) {
       if (!completer.isCompleted) {
         completer.complete(false);

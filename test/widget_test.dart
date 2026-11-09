@@ -1364,4 +1364,124 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'Auto-forwarding batches multiple outbound RPC messages after stream completion, preserves custom thread titles, and handles flag/env/regex sandbox heuristics',
+    (WidgetTester tester) async {
+      setDesktopSurfaceSize(tester, const Size(1280, 960));
+
+      final sessions = <String, _FakeAntigravitySession>{};
+      final streamControllers = <String, List<StreamController<String>>>{};
+
+      final repository = createFakeRepository(
+        recordedSessions: sessions,
+        customReplyStream: (prompt, threadId, threadTitle) {
+          final controller = StreamController<String>();
+          streamControllers
+              .putIfAbsent(threadId, () => <StreamController<String>>[])
+              .add(controller);
+          return controller.stream;
+        },
+      );
+
+      final viewModel = ChatViewModel(
+        repository: repository,
+        forwardSurfaceActionsToAgent: true,
+        forwardRpcMessagesToAgent: true,
+      );
+      addTearDown(() {
+        for (final list in streamControllers.values) {
+          for (final controller in list) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          }
+        }
+        viewModel.dispose();
+      });
+
+      await tester.pumpWidget(MarkdownChatApp(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      // 1. Verify sandbox heuristics for --flag=/path, $HOME, trailing /.., and /regex/
+      const workspace = '/tmp/project_workspace';
+      expect(
+        ChatRepository.findOutsideWorkspacePathInCommand(
+          'curl --output=/etc/hosts https://example.com',
+          [workspace],
+        ),
+        '/etc/hosts',
+      );
+      expect(
+        ChatRepository.findOutsideWorkspacePathInCommand(
+          r'cat $HOME/.ssh/id_rsa',
+          [workspace],
+        ),
+        r'$HOME/.ssh/id_rsa',
+      );
+      expect(
+        ChatRepository.findOutsideWorkspacePathInCommand(
+          'ls subdir/../..',
+          [workspace],
+        ),
+        'subdir/../..',
+      );
+      expect(
+        ChatRepository.findOutsideWorkspacePathInCommand(
+          'ls subdir/..',
+          [workspace],
+        ),
+        isNull,
+      );
+      expect(
+        ChatRepository.findOutsideWorkspacePathInCommand(
+          "awk '/pattern/' README.md",
+          [workspace],
+        ),
+        isNull,
+      );
+
+      // 2. Create a new empty thread, rename it explicitly, then send first message:
+      // verify custom title is preserved rather than overwritten by auto-titling
+      final newThread = viewModel.createNewThread();
+      viewModel.renameThread(newThread.id, 'Custom Pinned Title');
+      await tester.pump();
+
+      viewModel.sendMessage('Run workspace RPC functions');
+      await tester.pump();
+      expect(viewModel.activeThread?.title, 'Custom Pinned Title');
+
+      // 3. Stream an assistant reply with two callRendererFunction messages AND trailing Markdown:
+      // verify the stream is not cancelled mid-flight and both RPC responses are batched into 1 turn
+      final firstTurn = streamControllers[newThread.id]!.single;
+      firstTurn.add(
+        '${ChatRepository.buildWorkspaceRpcReply()}\n\nTrailing summary paragraph.',
+      );
+      await tester.pump();
+
+      // While firstTurn is still open, no follow-up RPC turn should have cancelled it
+      final session = sessions[newThread.id]!;
+      expect(session.prompts, hasLength(1));
+
+      await firstTurn.close();
+      await tester.pump();
+
+      // Now that firstTurn closed, both RPC responses were flushed in a single batched turn
+      expect(
+        find.text('Trailing summary paragraph.'),
+        findsOneWidget,
+      );
+      expect(session.prompts, hasLength(2));
+      final batchedPayload =
+          jsonDecode(session.prompts.last) as Map<String, dynamic>;
+      final a2uiPayload = batchedPayload['a2ui'] as Map<String, dynamic>;
+      final messages = a2uiPayload['messages'] as List<dynamic>;
+      expect(messages, hasLength(2));
+
+      final secondTurn = streamControllers[newThread.id]!.last;
+      secondTurn.add('Processed both RPC responses.');
+      await secondTurn.close();
+      await tester.pumpAndSettle();
+    },
+  );
 }

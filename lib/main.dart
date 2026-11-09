@@ -19,7 +19,12 @@ class MarkdownChatApp extends StatefulWidget {
 }
 
 class _MarkdownChatAppState extends State<MarkdownChatApp> {
-  late final ChatViewModel _viewModel = widget.viewModel ?? ChatViewModel();
+  late final ChatViewModel _viewModel =
+      widget.viewModel ??
+      ChatViewModel(
+        forwardSurfaceActionsToAgent: true,
+        forwardRpcMessagesToAgent: true,
+      );
 
   @override
   void dispose() {

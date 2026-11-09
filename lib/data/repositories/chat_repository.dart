@@ -287,6 +287,29 @@ class ChatRepository {
     '/dev/null',
   ];
 
+  static const Set<String> _knownRootDirectories = {
+    'applications',
+    'bin',
+    'cores',
+    'dev',
+    'etc',
+    'home',
+    'library',
+    'mnt',
+    'opt',
+    'private',
+    'proc',
+    'root',
+    'sbin',
+    'srv',
+    'system',
+    'tmp',
+    'users',
+    'usr',
+    'var',
+    'volumes',
+  };
+
   /// Finds the first path token in [commandLine] that resolves outside
   /// [workspaces], or returns `null` if all referenced paths remain inside the
   /// workspace.
@@ -296,24 +319,47 @@ class ChatRepository {
   ) {
     if (commandLine.isEmpty || workspaces.isEmpty) return null;
     final primaryWorkspace = workspaces.first;
-    final tokens = commandLine
+    final rawTokens = commandLine
         .split(RegExp(r'''[\s"'`;|&><()]+'''))
         .map((t) => t.trim())
         .where((t) => t.isNotEmpty);
 
-    for (final token in tokens) {
+    for (final rawToken in rawTokens) {
+      // Extract the right-hand side for `--flag=/path` or `KEY=/path` tokens.
+      final eqIndex = rawToken.indexOf('=');
+      final token = (eqIndex > 0 && eqIndex < rawToken.length - 1)
+          ? rawToken.substring(eqIndex + 1).trim()
+          : rawToken;
+      if (token.isEmpty) continue;
+
       String? candidatePath;
       if (token == '~' || token.startsWith('~/')) {
         candidatePath = normalizeWorkspacePath(token);
+      } else if (token == r'$HOME' ||
+          token.startsWith(r'$HOME/') ||
+          token == r'${HOME}' ||
+          token.startsWith(r'${HOME}/')) {
+        final suffix = token.replaceFirst(RegExp(r'^\$\{?HOME\}?'), '~');
+        candidatePath = normalizeWorkspacePath(suffix);
+      } else if (token == r'$TMPDIR' ||
+          token.startsWith(r'$TMPDIR/') ||
+          token == r'${TMPDIR}' ||
+          token.startsWith(r'${TMPDIR}/')) {
+        final tempRoot = p.normalize(Directory.systemTemp.absolute.path);
+        final rest = token.replaceFirst(RegExp(r'^\$\{?TMPDIR\}?/?'), '');
+        candidatePath = rest.isEmpty
+            ? tempRoot
+            : p.normalize(p.join(tempRoot, rest));
       } else if (token == '..' ||
           token.startsWith('../') ||
-          token.contains('/../')) {
+          token.contains('/../') ||
+          token.endsWith('/..')) {
         candidatePath = p.normalize(p.join(primaryWorkspace, token));
       } else if (token.startsWith('/') && token.length > 1) {
         final isStandardBinary = _standardSystemExecutablePrefixes.any(
           (prefix) => token == prefix || token.startsWith(prefix),
         );
-        if (!isStandardBinary) {
+        if (!isStandardBinary && !_isLikelySlashDelimitedRegex(token)) {
           candidatePath = p.normalize(token);
         }
       }
@@ -328,6 +374,27 @@ class ChatRepository {
       }
     }
     return null;
+  }
+
+  /// Returns `true` when [token] looks like a single-segment `/pattern/` regex
+  /// literal (e.g. from `awk '/pattern/'` or `sed '/pattern/d'`) rather than a
+  /// filesystem path.
+  static bool _isLikelySlashDelimitedRegex(String token) {
+    if (!token.startsWith('/') || !token.endsWith('/') || token.length < 3) {
+      return false;
+    }
+    final inner = token.substring(1, token.length - 1);
+    if (inner.contains('/')) {
+      return false;
+    }
+    if (_knownRootDirectories.contains(inner.toLowerCase())) {
+      return false;
+    }
+    final normalized = p.normalize(token);
+    if (Directory(normalized).existsSync() || File(normalized).existsSync()) {
+      return false;
+    }
+    return true;
   }
 
   /// Returns `true` when a `run_command` [toolCall] wants to escape the

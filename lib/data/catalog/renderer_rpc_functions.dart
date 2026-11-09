@@ -177,8 +177,12 @@ class ListWorkspaceFilesFunction extends FunctionImplementation {
     }
 
     try {
+      const maxScannedEntries = 1000;
+      var scanned = 0;
       final entries = <String>[];
       for (final entity in dir.listSync(followLinks: false)) {
+        if (cancellationSignal?.isCancelled ?? false) break;
+        if (++scanned > maxScannedEntries) break;
         final name = p.basename(entity.path);
         if (name.startsWith('.')) continue;
         if (normalizedExt.isNotEmpty &&
