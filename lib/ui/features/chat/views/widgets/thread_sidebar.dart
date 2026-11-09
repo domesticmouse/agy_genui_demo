@@ -36,11 +36,23 @@ class ThreadSidebar extends StatelessWidget {
     if (thread.messages.isEmpty) {
       return 'No messages yet';
     }
-    final last = thread.messages.last.content
+    final lastMessage = thread.messages.last;
+    final strippedA2ui = lastMessage.content.replaceAll(
+      RegExp(r'<a2ui-json>[\s\S]*?(?:<\/a2ui-json>|$)'),
+      '',
+    );
+    final last = strippedA2ui
         .replaceAll(RegExp(r'[#*`>~|]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    return last.isEmpty ? 'Empty message' : last;
+    if (last.isNotEmpty) {
+      return last;
+    }
+    if (lastMessage.surfaces.isNotEmpty ||
+        lastMessage.content.contains('<a2ui-json')) {
+      return 'Interactive A2UI surface';
+    }
+    return 'Empty message';
   }
 
   @override

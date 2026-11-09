@@ -1,13 +1,20 @@
-# macOS Markdown Chat (`agy_genui_demo`)
+# macOS Markdown & A2UI v1.0 Chat (`agy_genui_demo`)
 
-A macOS desktop Markdown chat application built with Flutter, [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus), and the [`antigravity`](https://pub.dev/packages/antigravity) SDK.
+A macOS desktop Markdown and A2UI v1.0 generative UI chat application built with Flutter, [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus), [`a2ui_core`](https://pub.dev/packages/a2ui_core), [`a2ui_agent`](https://pub.dev/packages/a2ui_agent), [`a2ui_flutter`](https://pub.dev/packages/a2ui_flutter), and the [`antigravity`](https://pub.dev/packages/antigravity) SDK.
 
 ## Features
 
 1. **Google Antigravity SDK Backend (`package:antigravity`)**
    - **Per-thread `Agent` sessions**: Each conversation thread manages an isolated Antigravity [`Agent`](https://pub.dev/packages/antigravity) configured via `LocalAgentConfig` and `CustomSystemInstructions`.
-   - **Streaming Markdown responses**: Assistant replies stream live from `ChatResponse.textStream` into the active thread's Markdown message bubble while maintaining per-thread typing state.
-   - **Lifecycle & error management**: Deleting a thread, changing a project's working directory, or disposing the view model cleanly stops the underlying `localharness` agent session (`agent.stop()`), and any SDK/validation errors are rendered as structured Markdown diagnostics.
+   - **Streaming Markdown & A2UI v1.0 responses**: Assistant replies stream live from `ChatResponse.textStream` through `StreamedAnswer` into the active thread's message bubble while maintaining per-thread typing state.
+   - **Lifecycle & error management**: Deleting a thread, changing a project's working directory, or disposing the view model cleanly stops the underlying `localharness` agent session (`agent.stop()`) and disposes per-thread A2UI renderers (`MessageProcessor.dispose()`).
+
+2. **Live Streaming A2UI v1.0 Surfaces (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`)**
+   - **Catalog & Prompt Negotiation**: Configures the A2UI v1.0 basic catalog (`basicCatalog()`) extended with custom bidirectional `FunctionImplementation`s (`buildAppA2uiCatalog()`), `A2uiGenerator`, and `A2uiRequestProcessor` (`DirectJsonFormatFactory(progressiveKeys: {'text', 'label'})`) and injects `a2uiRequestProcessor.promptSnippet` into `CustomSystemInstructions`.
+   - **Incremental `<a2ui-json>` Streaming**: Each thread owns a `MessageProcessor<ComponentImplementation>` (`A2uiProtocolVersion.v1_0`). As chunks arrive, `StreamedAnswer<ComponentImplementation>` splits responses into `AnswerTextPart`, `AnswerSurfacePart`, and `AnswerErrorPart`, healing incomplete JSON so `A2uiSurface` widgets mount and update live before `</a2ui-json>` even closes.
+   - **Inline Rendering & Action Forwarding**: `MessageBubble` renders `AnswerTextPart` via `MarkdownBody`, `AnswerSurfacePart` via `A2uiMarkdown` + `A2uiSurface(key: ObjectKey(surface), surface: surface)`, and `AnswerErrorPart` as an inline diagnostic banner without halting subsequent surfaces. User actions emitted on `renderer.model.onAction` are captured per thread and can be forwarded to the agent as A2UI v1.0 `ActionMessage` payloads (with `a2uiRendererDataModel` metadata when `sendDataModel: true`).
+   - **Interactive Clarifying Questions & Parameter Forms**: Supports interactive A2UI v1.0 parameter forms combining `Card`, `Column`, `ChoicePicker` (`mutuallyExclusive` chips and `multipleSelection` checkboxes), `TextField` with client-side validation `checks` (`required`, `length`, `regex`, `numeric`), `Slider`, `CheckBox`, reactive summary `Text` (`formatParameterSummary`), local preset `Button`s (`action.functionCall` -> `setSurfaceData`), and primary submit `Button`s (`action.event`) gated by validation `checks`.
+   - **Bidirectional Renderer RPC Functions (`FunctionImplementation` & `RpcHandler`)**: Registers `GetWorkspaceInfoFunction` (`getWorkspaceInfo`), `ListWorkspaceFilesFunction` (`listWorkspaceFiles`), `SetSurfaceDataFunction` (`setSurfaceData`), and `FormatParameterSummaryFunction` (`formatParameterSummary`) with `AllowedCallers.rendererOrAgent` and wires `outboundListener` on each thread's `MessageProcessor` so the agent can call renderer functions (`callRendererFunction` -> `rendererFunctionResponse`) and the renderer can call agent functions (`callAgentFunction` -> `agentFunctionResponse`).
 
 2. **Projects & Working Directory Management (`workspaces`)**
    - **Project-scoped threads**: Projects group conversation threads and set the explicit working directory (`workspaces: [project.workingDirectory]`) passed to `LocalAgentConfig` for the Antigravity `localharness`.

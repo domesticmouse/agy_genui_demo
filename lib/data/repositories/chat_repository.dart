@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:a2ui_agent/a2ui_agent.dart';
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
+import 'package:a2ui_flutter/basic_catalog.dart';
 import 'package:antigravity/antigravity.dart';
 import 'package:path/path.dart' as p;
 
 import '../../domain/models/chat_models.dart';
+import '../catalog/renderer_rpc_functions.dart';
 
 /// Session contract for an Antigravity [Agent] backing a single conversation thread.
 abstract class AntigravityAgentSession {
@@ -79,7 +84,8 @@ typedef CommandApprovalHandler = Future<bool> Function(
 });
 
 /// Repository supplying starter projects and conversation threads, and managing
-/// per-thread Google Antigravity SDK ([Agent] / [LocalAgentConfig]) sessions.
+/// per-thread Google Antigravity SDK ([Agent] / [LocalAgentConfig]) sessions
+/// alongside A2UI v1.0 catalog negotiation and `<a2ui-json>` prompt generation.
 class ChatRepository {
   ChatRepository({
     AntigravitySessionBuilder? sessionBuilder,
@@ -89,16 +95,55 @@ class ChatRepository {
     this.workspaces,
     this.policies,
     this.commandApprovalHandler,
+    this.workspaceInfoProvider,
     this.systemInstructionText = defaultSystemInstructions,
-  }) : _sessionBuilder = sessionBuilder ?? _defaultSessionBuilder;
+    CatalogImplementation? a2uiCatalog,
+  }) : _sessionBuilder = sessionBuilder ?? _defaultSessionBuilder {
+    this.a2uiCatalog =
+        a2uiCatalog ??
+        buildAppA2uiCatalog(
+          workspaceInfoProvider: () =>
+              workspaceInfoProvider?.call() ?? _defaultWorkspaceSnapshot(),
+        );
+  }
+
+  /// Default A2UI v1.0 catalog combining [basicCatalog] with bidirectional
+  /// renderer RPC [FunctionImplementation]s (`getWorkspaceInfo`,
+  /// `listWorkspaceFiles`, `setSurfaceData`, `formatParameterSummary`).
+  static final CatalogImplementation defaultA2uiCatalog = buildAppA2uiCatalog();
+
+  /// Direct JSON format factory (`<a2ui-json>...</a2ui-json>`) with progressive
+  /// string healing for `text` and `label` properties while streaming.
+  static const DirectJsonFormatFactory defaultA2uiFormatFactory =
+      DirectJsonFormatFactory(progressiveKeys: {'text', 'label'});
 
   /// Default system instructions guiding the Antigravity agent to respond in
-  /// well-structured GitHub-Flavored Markdown.
+  /// well-structured GitHub-Flavored Markdown, emit interactive A2UI v1.0
+  /// clarifying question / parameter forms, and use bidirectional renderer RPC
+  /// functions.
   static const String defaultSystemInstructions =
-      'You are a helpful AI assistant inside a macOS desktop Markdown chat application. '
+      'You are a helpful AI assistant inside a macOS desktop Markdown and A2UI v1.0 chat application. '
       'Format all responses using clean, well-structured GitHub-Flavored Markdown '
       '(headings, bulleted or numbered lists, inline code, fenced code blocks with '
-      'language tags, blockquotes, and tables when appropriate).';
+      'language tags, blockquotes, and tables when appropriate). '
+      'When presenting interactive forms, clarifying questions, parameter builders, cards, or controls, '
+      'emit A2UI v1.0 JSON messages wrapped in literal `<a2ui-json>` and `</a2ui-json>` tags inline alongside your Markdown.\n\n'
+      '### Interactive Clarifying Questions & Parameter Forms\n'
+      '- When a request is ambiguous or benefits from structured parameters, emit an A2UI v1.0 surface '
+      'with `sendDataModel: true` containing a `Card` and `Column` of controls:\n'
+      '  - `ChoicePicker` (`variant`: `"mutuallyExclusive"` or `"multipleSelection"`, `displayStyle`: `"chips"` or `"checkbox"`)\n'
+      '  - `TextField` with validation `checks` (`required`, `length`, `regex`, `numeric`)\n'
+      '  - `Slider` and `CheckBox` for numeric thresholds and boolean flags\n'
+      '  - `Text` bound to `{"@call": "formatParameterSummary", "args": {...}}` for a live summary preview\n'
+      '  - Preset `Button`s using `action.functionCall` with `{"@call": "setSurfaceData", "args": {"path": "...", "value": ...}}`\n'
+      '  - A primary submit `Button` (gated by `checks` so it is disabled until required fields are valid) '
+      'whose `action.event` dispatches the bound parameter values back to you.\n\n'
+      '### Bidirectional Renderer RPC Functions\n'
+      '- You can invoke renderer-side functions (`getWorkspaceInfo`, `listWorkspaceFiles`, `setSurfaceData`, `formatParameterSummary`) '
+      'either inside component expressions (`{"@call": "..."}`) or directly via an A2UI v1.0 `callRendererFunction` message '
+      '(always include `"catalogId": "${BasicCatalog.v1_0Id}"` inside `callRendererFunction.callFunction`).\n'
+      '- When the renderer sends a `callAgentFunction` message, reply with an `agentFunctionResponse` message '
+      'matching its `functionCallId`.';
 
   final AntigravitySessionBuilder _sessionBuilder;
   final String? model;
@@ -107,6 +152,33 @@ class ChatRepository {
   final List<String>? workspaces;
   final List<Policy>? policies;
   final String systemInstructionText;
+
+  /// Optional callback supplying live workspace/project/thread/theme state to
+  /// renderer RPC functions (`getWorkspaceInfo`, `listWorkspaceFiles`).
+  WorkspaceInfoProvider? workspaceInfoProvider;
+
+  /// The A2UI v1.0 component and function catalog used by the renderer and agent.
+  late final CatalogImplementation a2uiCatalog;
+
+  /// Long-lived A2UI generator configured with [a2uiCatalog] and [defaultA2uiFormatFactory].
+  late final A2uiGenerator a2uiGenerator = A2uiGenerator(
+    catalogs: [CatalogConfig(a2uiCatalog)],
+    inferenceFormatFactory: defaultA2uiFormatFactory,
+  );
+
+  /// Negotiated A2UI v1.0 request processor for generating `<a2ui-json>` prompt
+  /// snippets and streaming [StreamedAnswer] responses.
+  late final A2uiRequestProcessor a2uiRequestProcessor =
+      a2uiGenerator.createProcessor(
+        A2uiRendererCapabilities.forCatalogIds(
+          [a2uiCatalog.id],
+          version: A2uiProtocolVersion.v1_0,
+        ),
+      );
+
+  /// The system prompt snippet teaching the model A2UI v1.0 `<a2ui-json>` syntax
+  /// and the active catalog schemas.
+  String get a2uiPromptSnippet => a2uiRequestProcessor.promptSnippet;
 
   /// Handler invoked when a command requests to escape the sandbox (`BypassSandbox`
   /// or accessing paths outside the project's working directory).
@@ -124,6 +196,23 @@ class ChatRepository {
     required String threadTitle,
   }) {
     return LocalAntigravityAgentSession(config: config);
+  }
+
+  WorkspaceInfoSnapshot _defaultWorkspaceSnapshot() {
+    final defaultDir =
+        (workspaces != null && workspaces!.isNotEmpty)
+            ? normalizeProjectDirectory(workspaces!.first)
+            : resolveDefaultWorkingDirectory();
+    return WorkspaceInfoSnapshot(
+      projectId: ChatThread.defaultProjectId,
+      projectName: p.basename(defaultDir).isEmpty
+          ? 'Default Workspace'
+          : p.basename(defaultDir),
+      workingDirectory: defaultDir,
+      activeThreadId: 'thread-showcase',
+      activeThreadTitle: 'Markdown Showcase',
+      themeMode: 'light',
+    );
   }
 
   /// Active thread IDs that currently have an initialized [AntigravityAgentSession].
@@ -396,7 +485,8 @@ class ChatRepository {
         text:
             '$systemInstructionText\n'
             'Active project working directory: "$activeDir" (project id: $projectId).\n'
-            'Active conversation thread: "$threadTitle" (id: $threadId).',
+            'Active conversation thread: "$threadTitle" (id: $threadId).\n\n'
+            '$a2uiPromptSnippet',
       ),
     );
   }
@@ -599,7 +689,80 @@ void main() {
 | Send Message | `Enter` / `Numpad Enter` | Ready |
 | Insert Newline | `Shift + Enter` | Ready |
 | Bold Formatting | `**text**` | Ready |
-| Live Preview | Toolbar Toggle | Ready |''',
+| Live Preview | Toolbar Toggle | Ready |
+
+## Interactive A2UI v1.0 Surfaces
+
+A2UI v1.0 JSON payloads stream live interactive `A2uiSurface` widgets inline alongside Markdown:
+
+<a2ui-json>
+[
+  {
+    "version": "1.0",
+    "createSurface": {
+      "surfaceId": "showcase-surface",
+      "catalogId": "${BasicCatalog.v1_0Id}",
+      "sendDataModel": true
+    }
+  },
+  {
+    "version": "1.0",
+    "updateComponents": {
+      "surfaceId": "showcase-surface",
+      "components": [
+        {
+          "id": "root",
+          "component": "Card",
+          "child": "card_body"
+        },
+        {
+          "id": "card_body",
+          "component": "Column",
+          "children": ["surface_heading", "live_checkbox", "action_button"]
+        },
+        {
+          "id": "surface_heading",
+          "component": "Text",
+          "text": "**Live Interactive A2UI v1.0 Widget**"
+        },
+        {
+          "id": "live_checkbox",
+          "component": "CheckBox",
+          "label": "Stream A2UI v1.0 surfaces inline",
+          "value": {"@path": "/streamInline"}
+        },
+        {
+          "id": "action_button",
+          "component": "Button",
+          "child": "action_label",
+          "action": {
+            "event": {
+              "name": "verify_a2ui_surface",
+              "context": {
+                "streamInline": {"@path": "/streamInline"}
+              }
+            }
+          }
+        },
+        {
+          "id": "action_label",
+          "component": "Text",
+          "text": "Test Surface Action"
+        }
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "updateDataModel": {
+      "surfaceId": "showcase-surface",
+      "value": {
+        "streamInline": true
+      }
+    }
+  }
+]
+</a2ui-json>''',
           ),
         ],
       ),
@@ -644,10 +807,346 @@ final isImeComposing = composing.isValid && !composing.isCollapsed;
     ];
   }
 
+  /// Builds an A2UI v1.0 clarifying questions & parameter form response for
+  /// interactive parameter collection, validation checks, and local/RPC
+  /// function evaluation.
+  static String buildClarifyingQuestionsReply({
+    String surfaceId = 'clarifying-form-surface',
+    String initialScope = 'Auth & API Service',
+  }) {
+    return '''### Clarifying Questions & Parameter Form
+
+Please review and customize the execution parameters below before running the task. Required fields are validated live on the client, and preset actions mutate the surface `DataModel` via the `setSurfaceData` RPC function:
+
+<a2ui-json>
+[
+  {
+    "version": "1.0",
+    "createSurface": {
+      "surfaceId": "$surfaceId",
+      "catalogId": "${BasicCatalog.v1_0Id}",
+      "sendDataModel": true
+    }
+  },
+  {
+    "version": "1.0",
+    "updateComponents": {
+      "surfaceId": "$surfaceId",
+      "components": [
+        {
+          "id": "root",
+          "component": "Card",
+          "child": "form_column"
+        },
+        {
+          "id": "form_column",
+          "component": "Column",
+          "children": [
+            "form_title",
+            "scope_field",
+            "target_picker",
+            "features_picker",
+            "concurrency_slider",
+            "sandbox_checkbox",
+            "live_summary",
+            "button_row"
+          ]
+        },
+        {
+          "id": "form_title",
+          "component": "Text",
+          "text": "**Configure Task Parameters**"
+        },
+        {
+          "id": "scope_field",
+          "component": "TextField",
+          "label": "Task Scope / Module",
+          "placeholder": "e.g. lib/data/repositories",
+          "value": {"@path": "/form/scope"},
+          "checks": [
+            {
+              "condition": {
+                "@call": "required",
+                "args": {"value": {"@path": "/form/scope"}}
+              },
+              "message": "Task scope is required."
+            }
+          ]
+        },
+        {
+          "id": "target_picker",
+          "component": "ChoicePicker",
+          "label": "Target Platform",
+          "variant": "mutuallyExclusive",
+          "displayStyle": "chips",
+          "options": [
+            {"label": "macOS Desktop", "value": "macos"},
+            {"label": "Web WASM", "value": "web"},
+            {"label": "CLI Binary", "value": "cli"}
+          ],
+          "value": {"@path": "/form/target"}
+        },
+        {
+          "id": "features_picker",
+          "component": "ChoicePicker",
+          "label": "Verification Capabilities",
+          "variant": "multipleSelection",
+          "displayStyle": "checkbox",
+          "options": [
+            {"label": "Unit & Widget Tests", "value": "tests"},
+            {"label": "Static Analysis", "value": "analyze"},
+            {"label": "Benchmarks", "value": "benchmarks"}
+          ],
+          "value": {"@path": "/form/features"}
+        },
+        {
+          "id": "concurrency_slider",
+          "component": "Slider",
+          "label": "Worker Concurrency",
+          "min": 1,
+          "max": 8,
+          "steps": 7,
+          "value": {"@path": "/form/concurrency"}
+        },
+        {
+          "id": "sandbox_checkbox",
+          "component": "CheckBox",
+          "label": "Enforce strict OS sandbox containment",
+          "value": {"@path": "/form/sandboxed"}
+        },
+        {
+          "id": "live_summary",
+          "component": "Text",
+          "variant": "caption",
+          "text": {
+            "@call": "formatParameterSummary",
+            "args": {
+              "scope": {"@path": "/form/scope"},
+              "target": {"@path": "/form/target"},
+              "features": {"@path": "/form/features"},
+              "concurrency": {"@path": "/form/concurrency"},
+              "sandboxed": {"@path": "/form/sandboxed"}
+            }
+          }
+        },
+        {
+          "id": "button_row",
+          "component": "Row",
+          "children": ["preset_button", "submit_button"]
+        },
+        {
+          "id": "preset_button",
+          "component": "Button",
+          "child": "preset_label",
+          "action": {
+            "functionCall": {
+              "@call": "setSurfaceData",
+              "args": {
+                "path": "/form/scope",
+                "value": "Full Workspace Audit"
+              }
+            }
+          }
+        },
+        {
+          "id": "preset_label",
+          "component": "Text",
+          "text": "Use Audit Preset"
+        },
+        {
+          "id": "submit_button",
+          "component": "Button",
+          "variant": "primary",
+          "child": "submit_label",
+          "checks": [
+            {
+              "condition": {
+                "@call": "required",
+                "args": {"value": {"@path": "/form/scope"}}
+              },
+              "message": "Enter a task scope before submitting."
+            }
+          ],
+          "action": {
+            "event": {
+              "name": "submit_clarifying_parameters",
+              "context": {
+                "scope": {"@path": "/form/scope"},
+                "target": {"@path": "/form/target"},
+                "features": {"@path": "/form/features"},
+                "concurrency": {"@path": "/form/concurrency"},
+                "sandboxed": {"@path": "/form/sandboxed"},
+                "summary": {
+                  "@call": "formatParameterSummary",
+                  "args": {
+                    "scope": {"@path": "/form/scope"},
+                    "target": {"@path": "/form/target"},
+                    "features": {"@path": "/form/features"},
+                    "concurrency": {"@path": "/form/concurrency"},
+                    "sandboxed": {"@path": "/form/sandboxed"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "submit_label",
+          "component": "Text",
+          "text": "Submit Parameters"
+        }
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "updateDataModel": {
+      "surfaceId": "$surfaceId",
+      "value": {
+        "form": {
+          "scope": "$initialScope",
+          "target": ["macos"],
+          "features": ["tests", "analyze"],
+          "concurrency": 4,
+          "sandboxed": true
+        }
+      }
+    }
+  }
+]
+</a2ui-json>''';
+  }
+
+  /// Builds an A2UI v1.0 response that invokes renderer-side RPC functions
+  /// (`getWorkspaceInfo` and `listWorkspaceFiles`) via `callRendererFunction`
+  /// alongside an interactive surface.
+  static String buildWorkspaceRpcReply({
+    String surfaceId = 'workspace-rpc-surface',
+    String infoCallId = 'rpc-workspace-info-1',
+    String filesCallId = 'rpc-workspace-files-1',
+  }) {
+    return '''### Bidirectional Renderer RPC Inspection
+
+Invoking renderer-hosted `getWorkspaceInfo` and `listWorkspaceFiles` functions via `callRendererFunction`:
+
+<a2ui-json>
+[
+  {
+    "version": "1.0",
+    "createSurface": {
+      "surfaceId": "$surfaceId",
+      "catalogId": "${BasicCatalog.v1_0Id}",
+      "sendDataModel": true
+    }
+  },
+  {
+    "version": "1.0",
+    "updateComponents": {
+      "surfaceId": "$surfaceId",
+      "components": [
+        {
+          "id": "root",
+          "component": "Card",
+          "child": "rpc_column"
+        },
+        {
+          "id": "rpc_column",
+          "component": "Column",
+          "children": ["rpc_heading", "rpc_files_text", "rpc_refresh_btn"]
+        },
+        {
+          "id": "rpc_heading",
+          "component": "Text",
+          "text": "**Workspace RPC Diagnostics**"
+        },
+        {
+          "id": "rpc_files_text",
+          "component": "Text",
+          "text": {
+            "@call": "formatString",
+            "args": {
+              "value": "Status: \${/rpc/status}"
+            }
+          }
+        },
+        {
+          "id": "rpc_refresh_btn",
+          "component": "Button",
+          "child": "rpc_refresh_label",
+          "action": {
+            "functionCall": {
+              "@call": "setSurfaceData",
+              "args": {
+                "path": "/rpc/status",
+                "value": "Refreshed via local FunctionImplementation"
+              }
+            }
+          }
+        },
+        {
+          "id": "rpc_refresh_label",
+          "component": "Text",
+          "text": "Run Local RPC Mutation"
+        }
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "updateDataModel": {
+      "surfaceId": "$surfaceId",
+      "value": {
+        "rpc": {
+          "status": "Awaiting RPC execution"
+        }
+      }
+    }
+  },
+  {
+    "version": "1.0",
+    "callRendererFunction": {
+      "functionCallId": "$infoCallId",
+      "surfaceId": "$surfaceId",
+      "callFunction": {
+        "@call": "getWorkspaceInfo",
+        "catalogId": "${BasicCatalog.v1_0Id}",
+        "args": {}
+      }
+    }
+  },
+  {
+    "version": "1.0",
+    "callRendererFunction": {
+      "functionCallId": "$filesCallId",
+      "surfaceId": "$surfaceId",
+      "callFunction": {
+        "@call": "listWorkspaceFiles",
+        "catalogId": "${BasicCatalog.v1_0Id}",
+        "args": {
+          "limit": 10
+        }
+      }
+    }
+  }
+]
+</a2ui-json>''';
+  }
+
   /// Builds a structured Markdown response tailored to [userPrompt] for
   /// deterministic previews and simulated test sessions.
   String buildAssistantReply(String userPrompt, {required String threadTitle}) {
     final trimmed = userPrompt.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower.contains('clarifying') ||
+        lower.contains('parameter form') ||
+        lower.contains('parameters form')) {
+      return buildClarifyingQuestionsReply();
+    }
+    if (lower.contains('workspace rpc') ||
+        lower.contains('callrendererfunction') ||
+        lower.contains('rpc function')) {
+      return buildWorkspaceRpcReply();
+    }
     final firstLine = trimmed.split('\n').first;
     final cleanTopic = firstLine.length > 48
         ? '${firstLine.substring(0, 48)}...'

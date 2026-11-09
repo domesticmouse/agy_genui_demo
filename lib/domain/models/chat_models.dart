@@ -1,3 +1,6 @@
+import 'package:a2ui_agent/a2ui_agent.dart';
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 /// Role of the author of a [ChatMessage].
@@ -38,7 +41,9 @@ class ChatProject {
   }
 }
 
-/// An immutable chat message containing raw Markdown content.
+/// An immutable chat message containing raw Markdown / `<a2ui-json>` content
+/// and parsed inline [AnswerPart]s (Markdown text, live [SurfaceModel]s, and
+/// A2UI error diagnostics).
 @immutable
 class ChatMessage {
   const ChatMessage({
@@ -46,6 +51,8 @@ class ChatMessage {
     required this.role,
     required this.content,
     required this.timestamp,
+    this.parts = const <AnswerPart<ComponentImplementation>>[],
+    this.hasParsedParts = false,
   });
 
   final String id;
@@ -53,7 +60,45 @@ class ChatMessage {
   final String content;
   final DateTime timestamp;
 
+  /// Ordered inline parts produced by `package:a2ui_agent`'s [StreamedAnswer]
+  /// ([AnswerTextPart], [AnswerSurfacePart], and [AnswerErrorPart]).
+  final List<AnswerPart<ComponentImplementation>> parts;
+
+  /// Whether [parts] was populated by a [StreamedAnswer] parser.
+  final bool hasParsedParts;
+
   bool get isUser => role == MessageRole.user;
+
+  /// All live A2UI v1.0 [SurfaceModel] instances embedded in this message.
+  List<SurfaceModel<ComponentImplementation>> get surfaces => [
+    for (final part in parts)
+      if (part is AnswerSurfacePart<ComponentImplementation>) part.surface,
+  ];
+
+  /// All A2UI parse/validation errors encountered in `<a2ui-json>` blocks of
+  /// this message.
+  List<A2uiError> get a2uiErrors => [
+    for (final part in parts)
+      if (part is AnswerErrorPart<ComponentImplementation>) part.error,
+  ];
+
+  ChatMessage copyWith({
+    String? id,
+    MessageRole? role,
+    String? content,
+    DateTime? timestamp,
+    List<AnswerPart<ComponentImplementation>>? parts,
+    bool? hasParsedParts,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      timestamp: timestamp ?? this.timestamp,
+      parts: parts ?? this.parts,
+      hasParsedParts: hasParsedParts ?? this.hasParsedParts,
+    );
+  }
 }
 
 /// An immutable conversation thread scoped to a [ChatProject] with its own

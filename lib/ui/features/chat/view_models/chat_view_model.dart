@@ -1,27 +1,40 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:a2ui_agent/a2ui_agent.dart';
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:antigravity/antigravity.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../../data/catalog/renderer_rpc_functions.dart';
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../domain/models/chat_models.dart';
 
 /// ViewModel managing macOS Markdown chat projects (working directories),
 /// per-project conversation threads, per-thread Antigravity agent streaming
-/// state, sandbox-escape command review prompts, sidebar collapse state, and
-/// Material 3 theme mode.
+/// state, per-thread A2UI v1.0 surface rendering ([MessageProcessor] and
+/// [StreamedAnswer]), sandbox-escape command review prompts, sidebar collapse
+/// state, and Material 3 theme mode.
 class ChatViewModel extends ChangeNotifier {
   ChatViewModel({
     ChatRepository? repository,
     this.responseDelay = Duration.zero,
+    this.onSurfaceAction,
+    this.onOutboundRpcMessage,
+    this.forwardSurfaceActionsToAgent = false,
+    this.forwardRpcMessagesToAgent = false,
   }) : _repository = repository ?? ChatRepository() {
     _repository.commandApprovalHandler ??= _handleCommandApprovalRequest;
+    _repository.workspaceInfoProvider ??= _buildWorkspaceInfoSnapshot;
     _projects.addAll(_repository.getStarterProjects());
     if (_projects.isNotEmpty) {
       _activeProjectId = _projects.first.id;
     }
-    _threads.addAll(_repository.getStarterThreads());
+    for (final thread in _repository.getStarterThreads()) {
+      _threads.add(_hydrateStarterThread(thread));
+    }
     final initialProjectThreads = threads;
     if (initialProjectThreads.isNotEmpty) {
       _activeThreadId = initialProjectThreads.first.id;
@@ -33,10 +46,37 @@ class ChatViewModel extends ChangeNotifier {
   final ChatRepository _repository;
   final Duration responseDelay;
 
+  /// Optional listener invoked whenever an interactive [A2uiSurface] in a
+  /// thread dispatches an [A2uiRendererAction].
+  final void Function(String threadId, A2uiRendererAction action)?
+  onSurfaceAction;
+
+  /// Optional listener invoked whenever a thread's [MessageProcessor] emits an
+  /// outbound RPC message ([RendererFunctionResponseMessage] or
+  /// [CallAgentFunctionMessage]).
+  final void Function(String threadId, RendererToAgentMessage message)?
+  onOutboundRpcMessage;
+
+  /// When `true`, user actions dispatched by an [A2uiSurface] automatically
+  /// send an A2UI v1.0 [ActionMessage] turn to the thread's Antigravity agent.
+  final bool forwardSurfaceActionsToAgent;
+
+  /// When `true`, outbound RPC messages ([RendererFunctionResponseMessage] and
+  /// [CallAgentFunctionMessage]) emitted by a thread's [MessageProcessor] are
+  /// automatically forwarded to the thread's Antigravity agent.
+  final bool forwardRpcMessagesToAgent;
+
   final List<ChatProject> _projects = [];
   final List<ChatThread> _threads = [];
   final Map<String, StreamSubscription<String>> _replySubscriptions = {};
   final Map<String, int> _activeRequestIds = {};
+
+  final Map<String, MessageProcessor<ComponentImplementation>>
+  _threadRenderers = {};
+  final Map<String, List<Subscription>> _rendererSubscriptions = {};
+  final Map<String, List<A2uiRendererAction>> _threadActions = {};
+  final Map<String, List<RendererToAgentMessage>> _threadOutboundRpcMessages =
+      {};
 
   final List<PendingCommandReview> _pendingReviews = [];
   final Map<String, Completer<bool>> _reviewCompleters = {};
@@ -90,6 +130,186 @@ class ChatViewModel extends ChangeNotifier {
   /// Returns the number of pending command reviews for [threadId].
   int pendingReviewCountForThread(String threadId) {
     return _pendingReviews.where((r) => r.threadId == threadId).length;
+  }
+
+  /// Returns or initializes the A2UI v1.0 [MessageProcessor] for [threadId].
+  MessageProcessor<ComponentImplementation> rendererForThread(String threadId) {
+    final existing = _threadRenderers[threadId];
+    if (existing != null) {
+      return existing;
+    }
+
+    final renderer = MessageProcessor<ComponentImplementation>(
+      catalogs: [_repository.a2uiCatalog],
+      defaultVersion: A2uiProtocolVersion.v1_0,
+      validationConfig: ValidationConfig.relaxed,
+      outboundListener: (message) =>
+          _handleOutboundRpcMessage(threadId, message),
+    );
+    _threadRenderers[threadId] = renderer;
+    _rendererSubscriptions[threadId] = [
+      renderer.model.onAction.subscribe(
+        (action) => _handleSurfaceAction(threadId, action),
+      ),
+      renderer.model.onSurfaceDeleted.subscribe(
+        (surfaceId) => _handleSurfaceDeleted(threadId, surfaceId),
+      ),
+    ];
+    return renderer;
+  }
+
+  /// All [A2uiRendererAction] events dispatched by interactive [A2uiSurface]
+  /// widgets in [threadId].
+  List<A2uiRendererAction> actionsForThread(String threadId) =>
+      List.unmodifiable(_threadActions[threadId] ?? const []);
+
+  /// All [A2uiRendererAction] events dispatched in the currently active thread.
+  List<A2uiRendererAction> get activeThreadActions =>
+      _activeThreadId.isEmpty ? const [] : actionsForThread(_activeThreadId);
+
+  /// Most recent [A2uiRendererAction] dispatched in the currently active thread,
+  /// or `null` if none has occurred.
+  A2uiRendererAction? get lastSurfaceAction =>
+      activeThreadActions.isEmpty ? null : activeThreadActions.last;
+
+  /// All outbound RPC messages ([RendererFunctionResponseMessage] and
+  /// [CallAgentFunctionMessage]) emitted by the [MessageProcessor] in [threadId].
+  List<RendererToAgentMessage> outboundRpcMessagesForThread(String threadId) =>
+      List.unmodifiable(_threadOutboundRpcMessages[threadId] ?? const []);
+
+  /// All outbound RPC messages emitted in the currently active thread.
+  List<RendererToAgentMessage> get activeThreadOutboundRpcMessages =>
+      _activeThreadId.isEmpty
+          ? const []
+          : outboundRpcMessagesForThread(_activeThreadId);
+
+  /// Most recent outbound RPC message emitted in the currently active thread,
+  /// or `null` if none has occurred.
+  RendererToAgentMessage? get lastOutboundRpcMessage =>
+      activeThreadOutboundRpcMessages.isEmpty
+          ? null
+          : activeThreadOutboundRpcMessages.last;
+
+  WorkspaceInfoSnapshot _buildWorkspaceInfoSnapshot() {
+    final project = activeProject;
+    final thread = activeThread;
+    final workingDir =
+        project?.workingDirectory ??
+        ChatRepository.resolveDefaultWorkingDirectory();
+    final activeRenderer = _activeThreadId.isEmpty
+        ? null
+        : _threadRenderers[_activeThreadId];
+    final surfaceIds = activeRenderer == null
+        ? const <String>[]
+        : [for (final s in activeRenderer.model.allSurfaces) s.id];
+
+    return WorkspaceInfoSnapshot(
+      projectId: project?.id ?? ChatThread.defaultProjectId,
+      projectName: project?.name ?? 'Default Workspace',
+      workingDirectory: workingDir,
+      activeThreadId: thread?.id ?? _activeThreadId,
+      activeThreadTitle: thread?.title ?? 'New Thread',
+      themeMode: _themeMode == ThemeMode.dark ? 'dark' : 'light',
+      surfaceIds: surfaceIds,
+    );
+  }
+
+  void _handleOutboundRpcMessage(
+    String threadId,
+    RendererToAgentMessage message,
+  ) {
+    if (_isDisposed) return;
+    _threadOutboundRpcMessages
+        .putIfAbsent(threadId, () => <RendererToAgentMessage>[])
+        .add(message);
+    onOutboundRpcMessage?.call(threadId, message);
+    if (forwardRpcMessagesToAgent) {
+      sendRpcMessageToAgent(message, threadId: threadId);
+    }
+    notifyListeners();
+  }
+
+  ChatThread _hydrateStarterThread(ChatThread thread) {
+    final renderer = rendererForThread(thread.id);
+    final hydratedMessages = <ChatMessage>[
+      for (final message in thread.messages)
+        if (message.isUser)
+          message
+        else
+          _parseMessageWithA2ui(message, renderer),
+    ];
+    return thread.copyWith(messages: hydratedMessages);
+  }
+
+  ChatMessage _parseMessageWithA2ui(
+    ChatMessage message,
+    MessageProcessor<ComponentImplementation> renderer,
+  ) {
+    final answer = StreamedAnswer<ComponentImplementation>(
+      _repository.a2uiRequestProcessor,
+      renderer: renderer,
+    );
+    answer.feed(message.content);
+    answer.close();
+    return message.copyWith(parts: answer.parts, hasParsedParts: true);
+  }
+
+  void _handleSurfaceAction(String threadId, A2uiRendererAction action) {
+    if (_isDisposed) return;
+    _threadActions.putIfAbsent(threadId, () => <A2uiRendererAction>[]).add(
+      action,
+    );
+    onSurfaceAction?.call(threadId, action);
+    if (forwardSurfaceActionsToAgent) {
+      sendSurfaceAction(action, threadId: threadId);
+    }
+    notifyListeners();
+  }
+
+  void _handleSurfaceDeleted(String threadId, String surfaceId) {
+    if (_isDisposed) return;
+    final index = _threads.indexWhere((t) => t.id == threadId);
+    if (index == -1) return;
+
+    final thread = _threads[index];
+    var changed = false;
+    final updatedMessages = <ChatMessage>[];
+    for (final message in thread.messages) {
+      if (!message.hasParsedParts) {
+        updatedMessages.add(message);
+        continue;
+      }
+      final filteredParts = [
+        for (final part in message.parts)
+          if (part is! AnswerSurfacePart<ComponentImplementation> ||
+              part.surface.id != surfaceId)
+            part,
+      ];
+      if (filteredParts.length != message.parts.length) {
+        changed = true;
+        updatedMessages.add(
+          message.copyWith(parts: List.unmodifiable(filteredParts)),
+        );
+      } else {
+        updatedMessages.add(message);
+      }
+    }
+    if (changed) {
+      _threads[index] = thread.copyWith(messages: updatedMessages);
+      notifyListeners();
+    }
+  }
+
+  void _disposeThreadRenderer(String threadId) {
+    final subscriptions = _rendererSubscriptions.remove(threadId);
+    if (subscriptions != null) {
+      for (final sub in subscriptions) {
+        sub.unsubscribe();
+      }
+    }
+    _threadActions.remove(threadId);
+    _threadOutboundRpcMessages.remove(threadId);
+    _threadRenderers.remove(threadId)?.dispose();
   }
 
   /// Returns the unsent composer draft saved for [threadId].
@@ -266,13 +486,15 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   /// Deletes a conversation thread, rejects any pending command reviews for it,
-  /// stops its Antigravity agent session, and ensures a valid active thread remains.
+  /// stops its Antigravity agent session, disposes its A2UI renderer, and
+  /// ensures a valid active thread remains.
   void deleteThread(String threadId) {
     _activeRequestIds.remove(threadId);
     _threadDrafts.remove(threadId);
     _denyPendingReviewsForThread(threadId);
     unawaited(_replySubscriptions.remove(threadId)?.cancel());
     unawaited(_repository.closeThreadSession(threadId));
+    _disposeThreadRenderer(threadId);
 
     _threads.removeWhere((t) => t.id == threadId);
     final remainingInProject = _threads
@@ -450,26 +672,154 @@ class ChatViewModel extends ChangeNotifier {
     _threads[index] = updatedThread;
     notifyListeners();
 
+    _streamAssistantTurn(
+      prompt: content,
+      threadId: threadId,
+      threadTitle: updatedTitle,
+      projectId: projectId,
+      workingDir: workingDir,
+    );
+  }
+
+  /// Sends an A2UI v1.0 [ActionMessage] (and current `a2uiRendererDataModel`
+  /// when present) for [action] to the thread's Antigravity agent session and
+  /// streams the assistant's reply.
+  void sendSurfaceAction(A2uiRendererAction action, {String? threadId}) {
+    final targetThreadId = threadId ?? _activeThreadId;
+    if (targetThreadId.isEmpty) return;
+    final index = _threads.indexWhere((t) => t.id == targetThreadId);
+    if (index == -1) return;
+
+    final thread = _threads[index];
+    final project = projectById(thread.projectId);
+    final workingDir =
+        project?.workingDirectory ??
+        ChatRepository.resolveDefaultWorkingDirectory();
+    final renderer = rendererForThread(targetThreadId);
+    final dataModel = renderer.getRendererDataModel(
+      version: A2uiProtocolVersion.v1_0,
+    );
+    final payload = <String, Object?>{
+      'a2ui': RendererToAgentMessagePayload([
+        ActionMessage(
+          version: A2uiProtocolVersion.v1_0.jsonValue,
+          action: action,
+        ),
+      ]).toJson(),
+      if (dataModel != null) 'metadata': {'a2uiRendererDataModel': dataModel},
+    };
+
+    _threads[index] = thread.copyWith(
+      updatedAt: DateTime.now(),
+      isTyping: true,
+    );
+    notifyListeners();
+
+    _streamAssistantTurn(
+      prompt: jsonEncode(payload),
+      threadId: targetThreadId,
+      threadTitle: thread.title,
+      projectId: thread.projectId,
+      workingDir: workingDir,
+    );
+  }
+
+  /// Sends an outbound A2UI v1.0 [RendererToAgentMessage] (such as a
+  /// [RendererFunctionResponseMessage] or [CallAgentFunctionMessage]) and the
+  /// current `a2uiRendererDataModel` to the thread's Antigravity agent session.
+  void sendRpcMessageToAgent(
+    RendererToAgentMessage message, {
+    String? threadId,
+  }) {
+    final targetThreadId = threadId ?? _activeThreadId;
+    if (targetThreadId.isEmpty) return;
+    final index = _threads.indexWhere((t) => t.id == targetThreadId);
+    if (index == -1) return;
+
+    final thread = _threads[index];
+    final project = projectById(thread.projectId);
+    final workingDir =
+        project?.workingDirectory ??
+        ChatRepository.resolveDefaultWorkingDirectory();
+    final renderer = rendererForThread(targetThreadId);
+    final dataModel = renderer.getRendererDataModel(
+      version: A2uiProtocolVersion.v1_0,
+    );
+    final payload = <String, Object?>{
+      'a2ui': RendererToAgentMessagePayload([message]).toJson(),
+      if (dataModel != null) 'metadata': {'a2uiRendererDataModel': dataModel},
+    };
+
+    _threads[index] = thread.copyWith(
+      updatedAt: DateTime.now(),
+      isTyping: true,
+    );
+    notifyListeners();
+
+    _streamAssistantTurn(
+      prompt: jsonEncode(payload),
+      threadId: targetThreadId,
+      threadTitle: thread.title,
+      projectId: thread.projectId,
+      workingDir: workingDir,
+    );
+  }
+
+  /// Invokes an agent-hosted function via the thread's [RpcHandler], emitting a
+  /// [CallAgentFunctionMessage] to `outboundListener` and returning a [Future]
+  /// that completes when the agent replies with a matching
+  /// [AgentFunctionResponseMessage].
+  Future<Object?> callAgentFunction(
+    String surfaceId,
+    FunctionCall call, {
+    String? threadId,
+    CallOptions? options,
+  }) {
+    final targetThreadId = threadId ?? _activeThreadId;
+    if (targetThreadId.isEmpty) {
+      return Future<Object?>.error(
+        StateError('Cannot call agent function without an active thread.'),
+      );
+    }
+    final renderer = rendererForThread(targetThreadId);
+    return renderer.rpc.callAgentFunction(surfaceId, call, options: options);
+  }
+
+  void _streamAssistantTurn({
+    required String prompt,
+    required String threadId,
+    required String threadTitle,
+    required String projectId,
+    required String workingDir,
+  }) {
     unawaited(_replySubscriptions.remove(threadId)?.cancel());
     final requestId = ++_idCounter;
     final assistantMessageId = 'msg-${++_idCounter}';
     final buffer = StringBuffer();
+    final renderer = rendererForThread(threadId);
+    final streamedAnswer = StreamedAnswer<ComponentImplementation>(
+      _repository.a2uiRequestProcessor,
+      renderer: renderer,
+    );
     _activeRequestIds[threadId] = requestId;
 
     final subscription = _createReplyStream(
-      content,
+      prompt,
       threadId: threadId,
-      threadTitle: updatedTitle,
+      threadTitle: threadTitle,
       projectId: projectId,
       workingDirectory: workingDir,
     ).listen(
       (chunk) {
         if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
         buffer.write(chunk);
+        streamedAnswer.feed(chunk);
         _upsertAssistantMessage(
           threadId: threadId,
           messageId: assistantMessageId,
           content: buffer.toString(),
+          parts: streamedAnswer.parts,
+          hasParsedParts: true,
           isTyping: true,
         );
       },
@@ -477,13 +827,27 @@ class ChatViewModel extends ChangeNotifier {
         if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
         _activeRequestIds.remove(threadId);
         _replySubscriptions.remove(threadId);
+        try {
+          streamedAnswer.close();
+        } on Object catch (_) {}
+        final formattedError = _formatErrorMarkdown(error);
         final errorMarkdown = buffer.isEmpty
-            ? _formatErrorMarkdown(error)
-            : '$buffer\n\n---\n${_formatErrorMarkdown(error)}';
+            ? formattedError
+            : '$buffer\n\n---\n$formattedError';
+        final errorParts = List<AnswerPart<ComponentImplementation>>.unmodifiable(
+          [
+            ...streamedAnswer.parts,
+            AnswerTextPart<ComponentImplementation>(
+              buffer.isEmpty ? formattedError : '\n\n---\n$formattedError',
+            ),
+          ],
+        );
         _upsertAssistantMessage(
           threadId: threadId,
           messageId: assistantMessageId,
           content: errorMarkdown,
+          parts: errorParts,
+          hasParsedParts: true,
           isTyping: false,
         );
       },
@@ -491,13 +855,27 @@ class ChatViewModel extends ChangeNotifier {
         if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
         _activeRequestIds.remove(threadId);
         _replySubscriptions.remove(threadId);
-        final finalContent = buffer.isEmpty
-            ? '_No response returned by Antigravity agent._'
-            : buffer.toString();
+        if (buffer.isEmpty) {
+          const fallback = '_No response returned by Antigravity agent._';
+          streamedAnswer.feed(fallback);
+          streamedAnswer.close();
+          _upsertAssistantMessage(
+            threadId: threadId,
+            messageId: assistantMessageId,
+            content: fallback,
+            parts: streamedAnswer.parts,
+            hasParsedParts: true,
+            isTyping: false,
+          );
+          return;
+        }
+        streamedAnswer.close();
         _upsertAssistantMessage(
           threadId: threadId,
           messageId: assistantMessageId,
-          content: finalContent,
+          content: buffer.toString(),
+          parts: streamedAnswer.parts,
+          hasParsedParts: true,
           isTyping: false,
         );
       },
@@ -529,6 +907,8 @@ class ChatViewModel extends ChangeNotifier {
     required String threadId,
     required String messageId,
     required String content,
+    required List<AnswerPart<ComponentImplementation>> parts,
+    required bool hasParsedParts,
     required bool isTyping,
   }) {
     final index = _threads.indexWhere((t) => t.id == threadId);
@@ -545,6 +925,8 @@ class ChatViewModel extends ChangeNotifier {
           role: MessageRole.assistant,
           content: content,
           timestamp: DateTime.now(),
+          parts: parts,
+          hasParsedParts: hasParsedParts,
         ),
       );
     } else {
@@ -553,6 +935,8 @@ class ChatViewModel extends ChangeNotifier {
         role: MessageRole.assistant,
         content: content,
         timestamp: messages[existingIndex].timestamp,
+        parts: parts,
+        hasParsedParts: hasParsedParts,
       );
     }
 
@@ -591,6 +975,9 @@ $error
       unawaited(subscription.cancel());
     }
     _replySubscriptions.clear();
+    for (final threadId in _threadRenderers.keys.toList()) {
+      _disposeThreadRenderer(threadId);
+    }
     unawaited(_repository.dispose());
     super.dispose();
   }

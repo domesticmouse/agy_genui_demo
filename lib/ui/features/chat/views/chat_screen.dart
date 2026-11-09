@@ -275,6 +275,27 @@ class _EmptyThreadPlaceholder extends StatelessWidget {
                       'Show a `Stream<String>` example in Dart using a fenced code block.',
                     ),
                   ),
+                  ActionChip(
+                    avatar: const Icon(Icons.widgets_outlined, size: 16),
+                    label: const Text('Build interactive A2UI v1.0 card'),
+                    onPressed: () => onQuickPrompt(
+                      'Create an interactive A2UI v1.0 surface with a Card, TextField, and Button alongside a Markdown summary.',
+                    ),
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.tune_outlined, size: 16),
+                    label: const Text('Clarifying parameter form'),
+                    onPressed: () => onQuickPrompt(
+                      'Present an interactive A2UI v1.0 clarifying parameter form with ChoicePicker, TextField validation checks, Slider, CheckBox, and Button.',
+                    ),
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.sync_alt_outlined, size: 16),
+                    label: const Text('Run workspace RPC function'),
+                    onPressed: () => onQuickPrompt(
+                      'Run the workspace RPC functions getWorkspaceInfo and listWorkspaceFiles via callRendererFunction.',
+                    ),
+                  ),
                 ],
               ),
             ],

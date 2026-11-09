@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:a2ui_core/a2ui_core.dart';
+import 'package:a2ui_flutter/a2ui_flutter.dart';
 import 'package:agy_genui_demo/data/repositories/chat_repository.dart';
 import 'package:agy_genui_demo/main.dart';
 import 'package:agy_genui_demo/ui/features/chat/view_models/chat_view_model.dart';
@@ -742,6 +745,623 @@ void main() {
       expect(identical(initialSession, refreshedSession), isFalse);
       expect((initialSession as _FakeAntigravitySession).stopped, isTrue);
       expect(createdSessions.last.threadTitle, 'Renamed Architecture Notes');
+    },
+  );
+
+  testWidgets(
+    'Streams <a2ui-json> v1.0 blocks into live interactive A2uiSurface widgets inline alongside Markdown',
+    (WidgetTester tester) async {
+      setDesktopSurfaceSize(tester, const Size(1280, 960));
+
+      final sessions = <String, _FakeAntigravitySession>{};
+      final streamControllers = <String, List<StreamController<String>>>{};
+
+      final repository = createFakeRepository(
+        recordedSessions: sessions,
+        customReplyStream: (prompt, threadId, threadTitle) {
+          final controller = StreamController<String>();
+          streamControllers
+              .putIfAbsent(threadId, () => <StreamController<String>>[])
+              .add(controller);
+          return controller.stream;
+        },
+      );
+
+      final viewModel = ChatViewModel(repository: repository);
+      addTearDown(() {
+        for (final list in streamControllers.values) {
+          for (final controller in list) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          }
+        }
+        viewModel.dispose();
+      });
+
+      await tester.pumpWidget(MarkdownChatApp(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      // 1. Starter showcase thread renders an inline A2uiSurface alongside Markdown
+      expect(find.byType(A2uiSurface), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Live Interactive A2UI v1.0 Widget'),
+        ),
+        findsOneWidget,
+      );
+
+      // 2. Create a new thread and stream a mixed Markdown + <a2ui-json> v1.0 response
+      await tester.tap(find.byKey(const Key('toolbar_new_thread_button')));
+      await tester.pumpAndSettle();
+      final threadId = viewModel.activeThreadId;
+
+      await tester.enterText(
+        find.byKey(const Key('composer_text_field')),
+        'Build an interactive trip planner surface',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('send_message_button')));
+      await tester.pump();
+
+      // Verify system instructions include A2UI v1.0 schema and catalog ID
+      final session = sessions[threadId]!;
+      final instructions =
+          session.config.systemInstructions as CustomSystemInstructions;
+      expect(instructions.text, contains('---BEGIN A2UI JSON SCHEMA---'));
+      expect(instructions.text, contains(BasicCatalog.v1_0Id));
+
+      final firstTurnController = streamControllers[threadId]!.single;
+
+      // Chunk 1: Leading Markdown + opening <a2ui-json> with createSurface
+      firstTurnController.add(
+        '### Trip Planner\n\nConfigure your flight below:\n\n'
+        '<a2ui-json>[{"version": "1.0", "createSurface": '
+        '{"surfaceId": "trip-planner", "catalogId": "${BasicCatalog.v1_0Id}", '
+        '"sendDataModel": true}}',
+      );
+      await tester.pump();
+
+      expect(find.text('Trip Planner'), findsOneWidget);
+      expect(find.text('Configure your flight below:'), findsOneWidget);
+      // Surface container and A2uiSurface are mounted as soon as createSurface arrives
+      expect(
+        find.byKey(const ValueKey('a2ui_surface_card_trip-planner')),
+        findsOneWidget,
+      );
+      expect(find.byType(A2uiSurface), findsOneWidget);
+
+      // Chunk 2: Stream updateComponents while the <a2ui-json> block is still open
+      firstTurnController.add(
+        ', {"version": "1.0", "updateComponents": {"surfaceId": "trip-planner", '
+        '"components": ['
+        '{"id": "root", "component": "Card", "child": "form_col"}, '
+        '{"id": "form_col", "component": "Column", "children": ["form_title", "dest_input", "direct_check", "book_btn"]}, '
+        '{"id": "form_title", "component": "Text", "text": "**Flight Preferences**"}, '
+        '{"id": "dest_input", "component": "TextField", "label": "Destination", "value": {"@path": "/destination"}}, '
+        '{"id": "direct_check", "component": "CheckBox", "label": "Direct flights only", "value": {"@path": "/directOnly"}}, '
+        '{"id": "book_btn", "component": "Button", "child": "book_label", "action": {"event": {"name": "book_flight", "context": {"destination": {"@path": "/destination"}, "directOnly": {"@path": "/directOnly"}}}}}, '
+        '{"id": "book_label", "component": "Text", "text": "Book Flight"}'
+        ']}}',
+      );
+      await tester.pump();
+
+      // Verify components are live inside A2uiSurface before </a2ui-json> even closes
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Flight Preferences'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.byType(TextField),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Book Flight'),
+        ),
+        findsOneWidget,
+      );
+
+      // Chunk 3: Stream updateDataModel, close </a2ui-json>, and stream trailing Markdown
+      firstTurnController.add(
+        ', {"version": "1.0", "updateDataModel": {"surfaceId": "trip-planner", '
+        '"value": {"destination": "Tokyo", "directOnly": true}}}]</a2ui-json>'
+        '\n\nAll fares include **carry-on baggage**.',
+      );
+      await firstTurnController.close();
+      await tester.pumpAndSettle();
+
+      // Verify trailing Markdown rendered below the A2uiSurface and sidebar stripped <a2ui-json>
+      expect(
+        find.text('All fares include carry-on baggage.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Trip Planner Configure your flight below: All fares include carry-on baggage.',
+        ),
+        findsOneWidget,
+      );
+
+      // Verify initial data model value bound to the TextField inside A2uiSurface
+      final surfaceTextFieldFinder = find.descendant(
+        of: find.byType(A2uiSurface),
+        matching: find.byType(TextField),
+      );
+      expect(
+        tester.widget<TextField>(surfaceTextFieldFinder).controller?.text,
+        'Tokyo',
+      );
+
+      // 3. Interact with the live A2uiSurface: edit TextField and tap Button
+      await tester.enterText(surfaceTextFieldFinder, 'Kyoto');
+      await tester.pump();
+
+      final renderer = viewModel.rendererForThread(threadId);
+      expect(
+        renderer.model.getSurface('trip-planner')?.dataModel.get('/destination'),
+        'Kyoto',
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Book Flight'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final action = viewModel.lastSurfaceAction;
+      expect(action, isNotNull);
+      expect(action!.name, 'book_flight');
+      expect(action.surfaceId, 'trip-planner');
+      expect(action.context, {'destination': 'Kyoto', 'directOnly': true});
+
+      // 4. Forward the surface action to the Antigravity agent and verify payload + live surface update
+      viewModel.sendSurfaceAction(action);
+      await tester.pump();
+
+      expect(session.prompts, hasLength(2));
+      final sentActionPayload =
+          jsonDecode(session.prompts.last) as Map<String, dynamic>;
+      expect(sentActionPayload['a2ui'], isA<Map<String, dynamic>>());
+      expect(
+        sentActionPayload['metadata'],
+        equals({
+          'a2uiRendererDataModel': {
+            'version': '1.0',
+            'surfaces': {
+              'trip-planner': {'destination': 'Kyoto', 'directOnly': true},
+            },
+          },
+        }),
+      );
+
+      final secondTurnController = streamControllers[threadId]!.last;
+      secondTurnController.add(
+        'Confirmed your booking to **Kyoto**!\n\n'
+        '<a2ui-json>[{"version": "1.0", "updateDataModel": '
+        '{"surfaceId": "trip-planner", "path": "/destination", "value": "Kyoto (Confirmed)"}}]</a2ui-json>',
+      );
+      await secondTurnController.close();
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(surfaceTextFieldFinder).controller?.text,
+        'Kyoto (Confirmed)',
+      );
+    },
+  );
+
+  testWidgets(
+    'Displays inline A2UI error diagnostics for rejected <a2ui-json> blocks and continues rendering subsequent surfaces',
+    (WidgetTester tester) async {
+      setDesktopSurfaceSize(tester, const Size(1280, 900));
+
+      final repository = createFakeRepository(
+        customReplyStream: (prompt, threadId, threadTitle) {
+          return Stream<String>.fromIterable([
+            'Before block.\n\n',
+            '<a2ui-json>[{"version": "1.0", "createSurface": {"surfaceId": "bad", "catalogId": "${BasicCatalog.v1_0Id}"}}, '
+                '{"version": "1.0", "updateComponents": {"surfaceId": "bad", "components": [{"id": "root", "component": "NonExistentWidget"}]}}]</a2ui-json>',
+            '\n\nMiddle Markdown paragraph.\n\n',
+            '<a2ui-json>[{"version": "1.0", "createSurface": {"surfaceId": "good", "catalogId": "${BasicCatalog.v1_0Id}"}}, '
+                '{"version": "1.0", "updateComponents": {"surfaceId": "good", "components": [{"id": "root", "component": "Text", "text": "Recovered Valid Surface"}]}}]</a2ui-json>',
+          ]);
+        },
+      );
+
+      final viewModel = ChatViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await tester.pumpWidget(MarkdownChatApp(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('toolbar_new_thread_button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('composer_text_field')),
+        'Test error recovery',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('send_message_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Before block.'), findsOneWidget);
+      expect(find.textContaining('NonExistentWidget'), findsOneWidget);
+      expect(find.text('Middle Markdown paragraph.'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Recovered Valid Surface'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'Interactive Clarifying Questions & Parameter Forms: ChoicePicker, TextField validation checks, Slider, CheckBox, local preset FunctionImplementation, and action round-trip',
+    (WidgetTester tester) async {
+      setDesktopSurfaceSize(tester, const Size(1280, 1080));
+
+      final sessions = <String, _FakeAntigravitySession>{};
+      final repository = createFakeRepository(recordedSessions: sessions);
+      final viewModel = ChatViewModel(repository: repository);
+      addTearDown(viewModel.dispose);
+
+      await tester.pumpWidget(MarkdownChatApp(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      // Create a new thread and trigger the "Clarifying parameter form" quick prompt chip
+      await tester.tap(find.byKey(const Key('toolbar_new_thread_button')));
+      await tester.pumpAndSettle();
+      final threadId = viewModel.activeThreadId;
+
+      await tester.tap(find.text('Clarifying parameter form'));
+      await tester.pumpAndSettle();
+
+      // Verify the clarifying parameter form surface mounted
+      expect(
+        find.byKey(const ValueKey('a2ui_surface_card_clarifying-form-surface')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Configure Task Parameters'),
+        ),
+        findsOneWidget,
+      );
+
+      // Verify live FormatParameterSummaryFunction rendered initial summary
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text(
+            'Scope: Auth & API Service | Target: macos | '
+            'Features: tests, analyze | Workers: 4 (sandboxed)',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      final scopeFieldFinder = find.descendant(
+        of: find.byType(A2uiSurface),
+        matching: find.byType(TextField),
+      );
+      final submitButtonFinder = find.descendant(
+        of: find.byType(A2uiSurface),
+        matching: find.byType(FilledButton),
+      );
+
+      // Initially valid: Submit Parameters FilledButton is enabled
+      expect(
+        tester.widget<FilledButton>(submitButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // 1. Clear required TextField -> validation check fails and disables Submit button
+      await tester.enterText(scopeFieldFinder, '');
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<FilledButton>(submitButtonFinder).onPressed,
+        isNull,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Task scope is required.'),
+        ),
+        findsOneWidget,
+      );
+
+      // 2. Tap "Use Audit Preset" button -> invokes local SetSurfaceDataFunction
+      // without a server round-trip and re-enables Submit button
+      final presetTextFinder = find.descendant(
+        of: find.byType(A2uiSurface),
+        matching: find.text('Use Audit Preset'),
+      );
+      await tester.ensureVisible(presetTextFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(presetTextFinder);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(scopeFieldFinder).controller?.text,
+        'Full Workspace Audit',
+      );
+      expect(
+        tester.widget<FilledButton>(submitButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      // 3. Interact with ChoicePicker chips ("CLI Binary") and multipleSelection checkbox ("Benchmarks")
+      await tester.tap(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('CLI Binary'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Benchmarks'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify FormatParameterSummaryFunction updated reactively
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text(
+            'Scope: Full Workspace Audit | Target: cli | '
+            'Features: tests, analyze, benchmarks | Workers: 4 (sandboxed)',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      // 4. Tap "Submit Parameters" primary button and verify dispatched A2uiRendererAction
+      await tester.ensureVisible(submitButtonFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(submitButtonFinder);
+      await tester.pumpAndSettle();
+
+      final action = viewModel.lastSurfaceAction;
+      expect(action, isNotNull);
+      expect(action!.name, 'submit_clarifying_parameters');
+      expect(action.surfaceId, 'clarifying-form-surface');
+      expect(action.context['scope'], 'Full Workspace Audit');
+      expect(action.context['target'], ['cli']);
+      expect(
+        action.context['features'],
+        equals(['tests', 'analyze', 'benchmarks']),
+      );
+      expect(action.context['concurrency'], 4);
+      expect(action.context['sandboxed'], isTrue);
+      expect(
+        action.context['summary'],
+        'Scope: Full Workspace Audit | Target: cli | '
+        'Features: tests, analyze, benchmarks | Workers: 4 (sandboxed)',
+      );
+
+      // Forward the submitted form action to the agent and verify payload + dataModel
+      viewModel.sendSurfaceAction(action);
+      await tester.pumpAndSettle();
+
+      final session = sessions[threadId]!;
+      expect(session.prompts, hasLength(2));
+      final payload =
+          jsonDecode(session.prompts.last) as Map<String, dynamic>;
+      expect(payload['a2ui'], isA<Map<String, dynamic>>());
+      final metadata = payload['metadata'] as Map<String, dynamic>;
+      final dataModel =
+          metadata['a2uiRendererDataModel'] as Map<String, dynamic>;
+      final surfaces = dataModel['surfaces'] as Map<String, dynamic>;
+      expect(
+        surfaces['clarifying-form-surface'],
+        equals({
+          'form': {
+            'scope': 'Full Workspace Audit',
+            'target': ['cli'],
+            'features': ['tests', 'analyze', 'benchmarks'],
+            'concurrency': 4,
+            'sandboxed': true,
+          },
+        }),
+      );
+    },
+  );
+
+  testWidgets(
+    'Bidirectional Renderer RPC Functions: agent callRendererFunction -> rendererFunctionResponse and renderer callAgentFunction -> agentFunctionResponse',
+    (WidgetTester tester) async {
+      setDesktopSurfaceSize(tester, const Size(1280, 960));
+
+      final sessions = <String, _FakeAntigravitySession>{};
+      final streamControllers = <String, List<StreamController<String>>>{};
+
+      final repository = createFakeRepository(
+        recordedSessions: sessions,
+        customReplyStream: (prompt, threadId, threadTitle) {
+          final controller = StreamController<String>();
+          streamControllers
+              .putIfAbsent(threadId, () => <StreamController<String>>[])
+              .add(controller);
+          return controller.stream;
+        },
+      );
+
+      final recordedRpcMessages = <(String, RendererToAgentMessage)>[];
+      final viewModel = ChatViewModel(
+        repository: repository,
+        onOutboundRpcMessage: (threadId, message) {
+          recordedRpcMessages.add((threadId, message));
+        },
+      );
+      addTearDown(() {
+        for (final list in streamControllers.values) {
+          for (final controller in list) {
+            if (!controller.isClosed) {
+              controller.close();
+            }
+          }
+        }
+        viewModel.dispose();
+      });
+
+      await tester.pumpWidget(MarkdownChatApp(viewModel: viewModel));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('toolbar_new_thread_button')));
+      await tester.pumpAndSettle();
+      final threadId = viewModel.activeThreadId;
+
+      // 1. Agent -> Renderer RPC: send prompt and stream ChatRepository.buildWorkspaceRpcReply()
+      await tester.tap(find.text('Run workspace RPC function'));
+      await tester.pump();
+
+      // Verify custom FunctionImplementations are advertised in the system prompt schema
+      final session = sessions[threadId]!;
+      final instructions =
+          session.config.systemInstructions as CustomSystemInstructions;
+      expect(instructions.text, contains('getWorkspaceInfo'));
+      expect(instructions.text, contains('listWorkspaceFiles'));
+      expect(instructions.text, contains('setSurfaceData'));
+      expect(instructions.text, contains('formatParameterSummary'));
+
+      final firstTurn = streamControllers[threadId]!.single;
+      firstTurn.add(ChatRepository.buildWorkspaceRpcReply());
+      await firstTurn.close();
+      await tester.pumpAndSettle();
+
+      // Verify the surface rendered and both callRendererFunction messages executed
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Workspace RPC Diagnostics'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Status: Awaiting RPC execution'),
+        ),
+        findsOneWidget,
+      );
+
+      final outbound = viewModel.outboundRpcMessagesForThread(threadId);
+      expect(outbound, hasLength(2));
+      expect(recordedRpcMessages, hasLength(2));
+
+      final infoResponse = outbound[0] as RendererFunctionResponseMessage;
+      expect(infoResponse.response.functionCallId, 'rpc-workspace-info-1');
+      expect(infoResponse.response.error, isNull);
+      final infoMap = infoResponse.response.value! as Map<String, Object?>;
+      expect(infoMap['projectId'], viewModel.activeProjectId);
+      expect(
+        infoMap['workingDirectory'],
+        viewModel.activeProject!.workingDirectory,
+      );
+      expect(infoMap['activeThreadId'], threadId);
+      expect(infoMap['themeMode'], 'light');
+
+      final filesResponse = outbound[1] as RendererFunctionResponseMessage;
+      expect(filesResponse.response.functionCallId, 'rpc-workspace-files-1');
+      expect(filesResponse.response.error, isNull);
+      final fileList = filesResponse.response.value! as List<Object?>;
+      expect(fileList, isNotEmpty);
+      expect(fileList, contains('pubspec.yaml'));
+
+      // Tap the local RPC button on the surface to verify SetSurfaceDataFunction
+      await tester.tap(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text('Run Local RPC Mutation'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(A2uiSurface),
+          matching: find.text(
+            'Status: Refreshed via local FunctionImplementation',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      // Forward the RendererFunctionResponseMessage back to the agent
+      viewModel.sendRpcMessageToAgent(infoResponse, threadId: threadId);
+      await tester.pump();
+      expect(session.prompts, hasLength(2));
+      final rpcTurnPayload =
+          jsonDecode(session.prompts.last) as Map<String, dynamic>;
+      expect(rpcTurnPayload['a2ui'], isA<Map<String, dynamic>>());
+
+      final secondTurn = streamControllers[threadId]!.last;
+      secondTurn.add('Workspace info received.');
+      await secondTurn.close();
+      await tester.pumpAndSettle();
+
+      // 2. Renderer -> Agent RPC: invoke callAgentFunction and resolve via streamed agentFunctionResponse
+      Object? resolvedAgentValue;
+      unawaited(
+        viewModel
+            .callAgentFunction(
+              'workspace-rpc-surface',
+              FunctionCall(
+                call: 'estimateTokenBudget',
+                catalogId: BasicCatalog.v1_0Id,
+                args: {'files': 10},
+              ),
+              threadId: threadId,
+            )
+            .then((value) {
+              resolvedAgentValue = value;
+            }),
+      );
+      await tester.pump();
+
+      final latestOutbound = viewModel.lastOutboundRpcMessage;
+      expect(latestOutbound, isA<CallAgentFunctionMessage>());
+      final callAgentMsg = latestOutbound! as CallAgentFunctionMessage;
+      expect(callAgentMsg.surfaceId, 'workspace-rpc-surface');
+      expect(callAgentMsg.callFunction['@call'], 'estimateTokenBudget');
+      expect(callAgentMsg.callFunction['args'], {'files': 10});
+
+      // Forward the CallAgentFunctionMessage to the agent and stream back agentFunctionResponse
+      viewModel.sendRpcMessageToAgent(callAgentMsg, threadId: threadId);
+      await tester.pump();
+
+      final thirdTurn = streamControllers[threadId]!.last;
+      thirdTurn.add(
+        'Computed token budget.\n\n'
+        '<a2ui-json>[{"version": "1.0", "agentFunctionResponse": '
+        '{"functionCallId": "${callAgentMsg.functionCallId}", '
+        '"value": {"estimatedTokens": 4096, "status": "ok"}}}]</a2ui-json>',
+      );
+      await thirdTurn.close();
+      await tester.pumpAndSettle();
+
+      expect(
+        resolvedAgentValue,
+        equals({'estimatedTokens': 4096, 'status': 'ok'}),
+      );
     },
   );
 }
