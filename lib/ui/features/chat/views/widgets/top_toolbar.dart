@@ -3,22 +3,27 @@ import 'package:flutter/material.dart';
 import '../../../../../domain/models/chat_models.dart';
 
 /// Responsive macOS top toolbar with split-view sidebar toggle, active thread
-/// status, new thread action, and Material 3 Light/Dark theme switching.
+/// status, active project workspace indicator, new thread action, and
+/// Material 3 Light/Dark theme switching.
 class TopToolbar extends StatelessWidget {
   const TopToolbar({
     super.key,
+    required this.activeProject,
     required this.activeThread,
     required this.isSidebarOpen,
     required this.isDarkMode,
     required this.onToggleSidebar,
+    required this.onEditProject,
     required this.onNewThread,
     required this.onToggleTheme,
   });
 
+  final ChatProject? activeProject;
   final ChatThread? activeThread;
   final bool isSidebarOpen;
   final bool isDarkMode;
   final VoidCallback onToggleSidebar;
+  final VoidCallback onEditProject;
   final VoidCallback onNewThread;
   final VoidCallback onToggleTheme;
 
@@ -44,6 +49,7 @@ class TopToolbar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isCompact = constraints.maxWidth < 520;
+          final showProjectChip = constraints.maxWidth >= 680;
           return Row(
             children: [
               IconButton(
@@ -86,6 +92,57 @@ class TopToolbar extends StatelessWidget {
                           '$messageCount ${messageCount == 1 ? 'msg' : 'msgs'}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (showProjectChip && activeProject != null) ...[
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message:
+                            'Project "${activeProject!.name}" working directory: ${activeProject!.workingDirectory}',
+                        child: InkWell(
+                          key: const Key('toolbar_project_badge'),
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: onEditProject,
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 240),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: colorScheme.outlineVariant.withValues(
+                                  alpha: 0.65,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.folder_outlined,
+                                  size: 13,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 5),
+                                Flexible(
+                                  child: Text(
+                                    activeProject!.workingDirectory,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      fontFamily: 'Menlo',
+                                      fontSize: 11,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

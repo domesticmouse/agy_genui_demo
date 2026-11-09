@@ -14,22 +14,57 @@ class MarkdownComposer extends StatefulWidget {
     required this.isPreviewVisible,
     required this.onTogglePreview,
     required this.onSend,
+    this.activeThreadId = '',
+    this.initialDraft = '',
+    this.onDraftChanged,
   });
 
   final bool isPreviewVisible;
   final VoidCallback onTogglePreview;
   final ValueChanged<String> onSend;
+  final String activeThreadId;
+  final String initialDraft;
+  final ValueChanged<String>? onDraftChanged;
 
   @override
   State<MarkdownComposer> createState() => _MarkdownComposerState();
 }
 
 class _MarkdownComposerState extends State<MarkdownComposer> {
-  final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialDraft,
+  );
   late final FocusNode _focusNode = FocusNode(onKeyEvent: _handleKeyEvent);
+  bool _isSyncingThreadDraft = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant MarkdownComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activeThreadId != oldWidget.activeThreadId) {
+      _isSyncingThreadDraft = true;
+      final nextDraft = widget.initialDraft;
+      _controller.value = TextEditingValue(
+        text: nextDraft,
+        selection: TextSelection.collapsed(offset: nextDraft.length),
+      );
+      _isSyncingThreadDraft = false;
+    }
+  }
+
+  void _handleControllerChanged() {
+    if (_isSyncingThreadDraft) return;
+    widget.onDraftChanged?.call(_controller.text);
+  }
 
   @override
   void dispose() {
+    _controller.removeListener(_handleControllerChanged);
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();

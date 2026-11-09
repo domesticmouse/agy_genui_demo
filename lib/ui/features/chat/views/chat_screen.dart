@@ -4,33 +4,66 @@ import '../../../../../domain/models/chat_models.dart';
 import '../view_models/chat_view_model.dart';
 import 'widgets/markdown_composer.dart';
 import 'widgets/message_bubble.dart';
+import 'widgets/project_dialog.dart';
+import 'widgets/sandbox_review_banner.dart';
 import 'widgets/thread_sidebar.dart';
 import 'widgets/top_toolbar.dart';
 
-/// Main macOS split-view chat screen with a collapsible thread sidebar,
-/// responsive top toolbar, Markdown message feed, and composer.
+/// Main macOS split-view chat screen with a collapsible project/thread sidebar,
+/// responsive top toolbar, Markdown message feed, sandbox-escape command review
+/// banner, and composer.
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key, required this.viewModel});
 
   final ChatViewModel viewModel;
+
+  Future<void> _handleNewProject(BuildContext context) async {
+    final result = await ProjectDialog.show(context);
+    if (result != null) {
+      viewModel.createProject(
+        name: result.name,
+        workingDirectory: result.workingDirectory,
+      );
+    }
+  }
+
+  Future<void> _handleEditProject(BuildContext context) async {
+    final activeProject = viewModel.activeProject;
+    if (activeProject == null) return;
+    final result = await ProjectDialog.show(
+      context,
+      existingProject: activeProject,
+    );
+    if (result != null) {
+      viewModel.updateProject(
+        activeProject.id,
+        name: result.name,
+        workingDirectory: result.workingDirectory,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: viewModel,
       builder: (context, _) {
+        final activeProject = viewModel.activeProject;
         final activeThread = viewModel.activeThread;
         final messages = activeThread?.messages ?? const <ChatMessage>[];
         final isTyping = activeThread?.isTyping ?? false;
+        final pendingReviews = viewModel.activeThreadPendingReviews;
 
         return Scaffold(
           body: Column(
             children: [
               TopToolbar(
+                activeProject: activeProject,
                 activeThread: activeThread,
                 isSidebarOpen: viewModel.isSidebarOpen,
                 isDarkMode: viewModel.isDarkMode,
                 onToggleSidebar: viewModel.toggleSidebar,
+                onEditProject: () => _handleEditProject(context),
                 onNewThread: viewModel.createNewThread,
                 onToggleTheme: viewModel.toggleThemeMode,
               ),
@@ -40,11 +73,18 @@ class ChatScreen extends StatelessWidget {
                   children: [
                     if (viewModel.isSidebarOpen)
                       ThreadSidebar(
+                        projects: viewModel.projects,
+                        activeProject: activeProject,
                         threads: viewModel.threads,
                         activeThreadId: viewModel.activeThreadId,
+                        onSelectProject: viewModel.selectProject,
+                        onNewProject: () => _handleNewProject(context),
+                        onEditProject: () => _handleEditProject(context),
                         onSelectThread: viewModel.selectThread,
                         onNewThread: viewModel.createNewThread,
                         onDeleteThread: viewModel.deleteThread,
+                        pendingReviewCountForThread:
+                            viewModel.pendingReviewCountForThread,
                       ),
                     Expanded(
                       child: Column(
@@ -52,6 +92,7 @@ class ChatScreen extends StatelessWidget {
                           Expanded(
                             child: messages.isEmpty && !isTyping
                                 ? _EmptyThreadPlaceholder(
+                                    activeProject: activeProject,
                                     onQuickPrompt: viewModel.sendMessage,
                                   )
                                 : ListView.builder(
@@ -74,7 +115,15 @@ class ChatScreen extends StatelessWidget {
                                     },
                                   ),
                           ),
+                          SandboxReviewBanner(
+                            reviews: pendingReviews,
+                            onApprove: viewModel.approveCommandReview,
+                            onDeny: viewModel.denyCommandReview,
+                          ),
                           MarkdownComposer(
+                            activeThreadId: activeThread?.id ?? '',
+                            initialDraft: viewModel.activeThreadDraft,
+                            onDraftChanged: viewModel.updateActiveThreadDraft,
                             isPreviewVisible: viewModel.isPreviewVisible,
                             onTogglePreview: viewModel.togglePreview,
                             onSend: viewModel.sendMessage,
@@ -140,8 +189,12 @@ class _TypingIndicatorBubble extends StatelessWidget {
 }
 
 class _EmptyThreadPlaceholder extends StatelessWidget {
-  const _EmptyThreadPlaceholder({required this.onQuickPrompt});
+  const _EmptyThreadPlaceholder({
+    required this.activeProject,
+    required this.onQuickPrompt,
+  });
 
+  final ChatProject? activeProject;
   final ValueChanged<String> onQuickPrompt;
 
   @override
@@ -178,6 +231,30 @@ class _EmptyThreadPlaceholder extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              if (activeProject != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Text(
+                    'Workspace: ${activeProject!.workingDirectory}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontFamily: 'Menlo',
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Wrap(
                 spacing: 8,

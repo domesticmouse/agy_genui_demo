@@ -1,20 +1,31 @@
 import 'dart:async';
 
+import 'package:antigravity/antigravity.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../../data/repositories/chat_repository.dart';
 import '../../../../domain/models/chat_models.dart';
 
-/// ViewModel managing macOS Markdown chat threads, per-thread Antigravity
-/// agent streaming state, automatic thread titling, sidebar collapse state,
-/// and Material 3 theme mode.
+/// ViewModel managing macOS Markdown chat projects (working directories),
+/// per-project conversation threads, per-thread Antigravity agent streaming
+/// state, sandbox-escape command review prompts, sidebar collapse state, and
+/// Material 3 theme mode.
 class ChatViewModel extends ChangeNotifier {
   ChatViewModel({
     ChatRepository? repository,
     this.responseDelay = Duration.zero,
   }) : _repository = repository ?? ChatRepository() {
+    _repository.commandApprovalHandler ??= _handleCommandApprovalRequest;
+    _projects.addAll(_repository.getStarterProjects());
+    if (_projects.isNotEmpty) {
+      _activeProjectId = _projects.first.id;
+    }
     _threads.addAll(_repository.getStarterThreads());
-    if (_threads.isNotEmpty) {
+    final initialProjectThreads = threads;
+    if (initialProjectThreads.isNotEmpty) {
+      _activeThreadId = initialProjectThreads.first.id;
+    } else if (_threads.isNotEmpty) {
       _activeThreadId = _threads.first.id;
     }
   }
@@ -22,10 +33,16 @@ class ChatViewModel extends ChangeNotifier {
   final ChatRepository _repository;
   final Duration responseDelay;
 
+  final List<ChatProject> _projects = [];
   final List<ChatThread> _threads = [];
   final Map<String, StreamSubscription<String>> _replySubscriptions = {};
   final Map<String, int> _activeRequestIds = {};
 
+  final List<PendingCommandReview> _pendingReviews = [];
+  final Map<String, Completer<bool>> _reviewCompleters = {};
+  final Map<String, String> _threadDrafts = {};
+
+  String _activeProjectId = ChatThread.defaultProjectId;
   String _activeThreadId = '';
   bool _isSidebarOpen = true;
   bool _isPreviewVisible = false;
@@ -34,20 +51,83 @@ class ChatViewModel extends ChangeNotifier {
   bool _isDisposed = false;
 
   ChatRepository get repository => _repository;
-  List<ChatThread> get threads => List.unmodifiable(_threads);
+  List<ChatProject> get projects => List.unmodifiable(_projects);
+  String get activeProjectId => _activeProjectId;
+
+  ChatProject? get activeProject {
+    for (final project in _projects) {
+      if (project.id == _activeProjectId) {
+        return project;
+      }
+    }
+    return _projects.isNotEmpty ? _projects.first : null;
+  }
+
+  /// Threads belonging to the currently active [ChatProject].
+  List<ChatThread> get threads => List.unmodifiable(
+    _threads.where((t) => t.projectId == _activeProjectId),
+  );
+
+  /// All threads across all projects.
+  List<ChatThread> get allThreads => List.unmodifiable(_threads);
+
   String get activeThreadId => _activeThreadId;
   bool get isSidebarOpen => _isSidebarOpen;
   bool get isPreviewVisible => _isPreviewVisible;
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
 
+  /// All pending sandbox-escape command reviews across threads.
+  List<PendingCommandReview> get pendingCommandReviews =>
+      List.unmodifiable(_pendingReviews);
+
+  /// Pending sandbox-escape command reviews for the currently active thread.
+  List<PendingCommandReview> get activeThreadPendingReviews =>
+      List.unmodifiable(
+        _pendingReviews.where((r) => r.threadId == _activeThreadId),
+      );
+
+  /// Returns the number of pending command reviews for [threadId].
+  int pendingReviewCountForThread(String threadId) {
+    return _pendingReviews.where((r) => r.threadId == threadId).length;
+  }
+
+  /// Returns the unsent composer draft saved for [threadId].
+  String draftForThread(String threadId) => _threadDrafts[threadId] ?? '';
+
+  /// Returns the unsent composer draft for the currently active thread.
+  String get activeThreadDraft =>
+      _activeThreadId.isEmpty ? '' : draftForThread(_activeThreadId);
+
+  /// Saves the unsent composer [draft] for the currently active thread.
+  void updateActiveThreadDraft(String draft) {
+    if (_activeThreadId.isEmpty) return;
+    if (draft.isEmpty) {
+      _threadDrafts.remove(_activeThreadId);
+    } else {
+      _threadDrafts[_activeThreadId] = draft;
+    }
+  }
+
   ChatThread? get activeThread {
     for (final thread in _threads) {
-      if (thread.id == _activeThreadId) {
+      if (thread.id == _activeThreadId &&
+          thread.projectId == _activeProjectId) {
         return thread;
       }
     }
-    return _threads.isNotEmpty ? _threads.first : null;
+    final projectThreads = threads;
+    return projectThreads.isNotEmpty ? projectThreads.first : null;
+  }
+
+  /// Finds the [ChatProject] for [projectId], falling back to [activeProject].
+  ChatProject? projectById(String projectId) {
+    for (final project in _projects) {
+      if (project.id == projectId) {
+        return project;
+      }
+    }
+    return activeProject;
   }
 
   /// Toggles the collapsible macOS split-view sidebar.
@@ -70,20 +150,109 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Selects a conversation thread by [threadId].
-  void selectThread(String threadId) {
-    if (_activeThreadId == threadId) return;
-    final exists = _threads.any((t) => t.id == threadId);
+  /// Selects a [ChatProject] by [projectId] and activates its top thread
+  /// (creating a new thread if the project has none).
+  void selectProject(String projectId) {
+    final exists = _projects.any((p) => p.id == projectId);
     if (!exists) return;
-    _activeThreadId = threadId;
+    _activeProjectId = projectId;
+    final projectThreads = _threads
+        .where((t) => t.projectId == projectId)
+        .toList();
+    if (projectThreads.isEmpty) {
+      createNewThread();
+      return;
+    }
+    if (!projectThreads.any((t) => t.id == _activeThreadId)) {
+      _activeThreadId = projectThreads.first.id;
+    }
     notifyListeners();
   }
 
-  /// Creates and selects a new empty conversation thread.
+  /// Creates and selects a new [ChatProject] with [workingDirectory] as its
+  /// Antigravity harness workspace, and initializes an empty thread in it.
+  ChatProject createProject({
+    required String name,
+    required String workingDirectory,
+  }) {
+    _idCounter++;
+    final normalizedDir = ChatRepository.normalizeProjectDirectory(
+      workingDirectory,
+    );
+    final trimmedName = name.trim();
+    final effectiveName = trimmedName.isNotEmpty
+        ? trimmedName
+        : (p.basename(normalizedDir).isNotEmpty
+              ? p.basename(normalizedDir)
+              : 'Project $_idCounter');
+
+    final newProject = ChatProject(
+      id: 'project-$_idCounter',
+      name: effectiveName,
+      workingDirectory: normalizedDir,
+      createdAt: DateTime.now(),
+    );
+    _projects.insert(0, newProject);
+    _activeProjectId = newProject.id;
+    createNewThread();
+    return newProject;
+  }
+
+  /// Updates the name and/or working directory of [projectId], closing any
+  /// existing Antigravity harness sessions in that project so subsequent turns
+  /// use the new workspace directory.
+  void updateProject(
+    String projectId, {
+    String? name,
+    required String workingDirectory,
+  }) {
+    final index = _projects.indexWhere((proj) => proj.id == projectId);
+    if (index == -1) return;
+
+    final current = _projects[index];
+    final normalizedDir = ChatRepository.normalizeProjectDirectory(
+      workingDirectory,
+    );
+    final trimmedName = name?.trim();
+    final updatedName = (trimmedName != null && trimmedName.isNotEmpty)
+        ? trimmedName
+        : current.name;
+
+    _projects[index] = current.copyWith(
+      name: updatedName,
+      workingDirectory: normalizedDir,
+    );
+
+    if (current.workingDirectory != normalizedDir) {
+      for (final thread in _threads.where((t) => t.projectId == projectId)) {
+        unawaited(_repository.closeThreadSession(thread.id));
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Selects a conversation thread by [threadId] (switching to its project if needed).
+  void selectThread(String threadId) {
+    if (_activeThreadId == threadId) return;
+    ChatThread? target;
+    for (final thread in _threads) {
+      if (thread.id == threadId) {
+        target = thread;
+        break;
+      }
+    }
+    if (target == null) return;
+    _activeProjectId = target.projectId;
+    _activeThreadId = target.id;
+    notifyListeners();
+  }
+
+  /// Creates and selects a new empty conversation thread in the active project.
   ChatThread createNewThread() {
     _idCounter++;
     final newThread = ChatThread(
       id: 'thread-$_idCounter',
+      projectId: _activeProjectId,
       title: 'New Thread',
       messages: const [],
       updatedAt: DateTime.now(),
@@ -96,22 +265,122 @@ class ChatViewModel extends ChangeNotifier {
     return newThread;
   }
 
-  /// Deletes a conversation thread, stops its Antigravity agent session, and
-  /// ensures a valid active thread remains.
+  /// Deletes a conversation thread, rejects any pending command reviews for it,
+  /// stops its Antigravity agent session, and ensures a valid active thread remains.
   void deleteThread(String threadId) {
     _activeRequestIds.remove(threadId);
+    _threadDrafts.remove(threadId);
+    _denyPendingReviewsForThread(threadId);
     unawaited(_replySubscriptions.remove(threadId)?.cancel());
     unawaited(_repository.closeThreadSession(threadId));
 
     _threads.removeWhere((t) => t.id == threadId);
-    if (_threads.isEmpty) {
+    final remainingInProject = _threads
+        .where((t) => t.projectId == _activeProjectId)
+        .toList();
+    if (remainingInProject.isEmpty) {
       createNewThread();
       return;
     }
     if (_activeThreadId == threadId) {
-      _activeThreadId = _threads.first.id;
+      _activeThreadId = remainingInProject.first.id;
     }
     notifyListeners();
+  }
+
+  /// Renames [threadId] to [newTitle] and refreshes its Antigravity session so
+  /// subsequent turns include the updated title in system instructions.
+  void renameThread(String threadId, String newTitle) {
+    final trimmed = newTitle.trim();
+    if (trimmed.isEmpty) return;
+    final index = _threads.indexWhere((t) => t.id == threadId);
+    if (index == -1) return;
+
+    final current = _threads[index];
+    if (current.title == trimmed && current.isAutoTitled) return;
+
+    _threads[index] = current.copyWith(
+      title: trimmed,
+      isAutoTitled: true,
+      updatedAt: DateTime.now(),
+    );
+    unawaited(_repository.closeThreadSession(threadId));
+    notifyListeners();
+  }
+
+  /// Handles an incoming sandbox-escape approval request from [ChatRepository]
+  /// by enqueueing a [PendingCommandReview] and awaiting the user's decision in the UI.
+  Future<bool> _handleCommandApprovalRequest(
+    ToolCall toolCall, {
+    required String threadId,
+    required String threadTitle,
+    required String projectId,
+    required String workingDirectory,
+    required String reason,
+  }) {
+    if (_isDisposed) {
+      return Future<bool>.value(false);
+    }
+
+    final reviewId = 'review-${++_idCounter}';
+    final commandLine = ChatRepository.extractCommandLine(toolCall);
+    final displayCommand = commandLine.isNotEmpty
+        ? commandLine
+        : '${toolCall.name}(${toolCall.args})';
+
+    final review = PendingCommandReview(
+      id: reviewId,
+      threadId: threadId,
+      threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: workingDirectory,
+      toolName: toolCall.name,
+      commandLine: displayCommand,
+      toolSummary: ChatRepository.extractToolSummary(toolCall),
+      bypassSandbox: ChatRepository.requestsBypassSandboxFlag(toolCall),
+      reason: reason,
+      rawArgs: Map<String, dynamic>.unmodifiable(toolCall.args),
+      timestamp: DateTime.now(),
+    );
+
+    final completer = Completer<bool>();
+    _pendingReviews.add(review);
+    _reviewCompleters[reviewId] = completer;
+    notifyListeners();
+    return completer.future;
+  }
+
+  /// Approves a pending sandbox-escape command review so the harness can execute it.
+  void approveCommandReview(String reviewId) {
+    _resolveCommandReview(reviewId, approved: true);
+  }
+
+  /// Denies a pending sandbox-escape command review so the harness blocks execution.
+  void denyCommandReview(String reviewId) {
+    _resolveCommandReview(reviewId, approved: false);
+  }
+
+  void _resolveCommandReview(String reviewId, {required bool approved}) {
+    _pendingReviews.removeWhere((r) => r.id == reviewId);
+    final completer = _reviewCompleters.remove(reviewId);
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(approved);
+    }
+    notifyListeners();
+  }
+
+  void _denyPendingReviewsForThread(String threadId) {
+    final matchingIds = _pendingReviews
+        .where((r) => r.threadId == threadId)
+        .map((r) => r.id)
+        .toList();
+    for (final id in matchingIds) {
+      _pendingReviews.removeWhere((r) => r.id == id);
+      final completer = _reviewCompleters.remove(id);
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(false);
+      }
+    }
   }
 
   /// Derives a concise, human-readable thread title from raw Markdown [input].
@@ -139,13 +408,20 @@ class ChatViewModel extends ChangeNotifier {
 
   /// Sends a user Markdown message in the currently active thread, updates the
   /// thread title automatically if untitled, and streams the Antigravity
-  /// assistant response for that thread.
+  /// assistant response configured with the project's working directory.
   void sendMessage(String rawMarkdown) {
     final content = rawMarkdown.trim();
     if (content.isEmpty) return;
 
     var current = activeThread ?? createNewThread();
     final threadId = current.id;
+    _threadDrafts.remove(threadId);
+    final projectId = current.projectId;
+    final project = projectById(projectId);
+    final workingDir =
+        project?.workingDirectory ??
+        ChatRepository.resolveDefaultWorkingDirectory();
+
     final index = _threads.indexWhere((t) => t.id == threadId);
     if (index == -1) return;
 
@@ -184,6 +460,8 @@ class ChatViewModel extends ChangeNotifier {
       content,
       threadId: threadId,
       threadTitle: updatedTitle,
+      projectId: projectId,
+      workingDirectory: workingDir,
     ).listen(
       (chunk) {
         if (_isDisposed || _activeRequestIds[threadId] != requestId) return;
@@ -232,6 +510,8 @@ class ChatViewModel extends ChangeNotifier {
     String userPrompt, {
     required String threadId,
     required String threadTitle,
+    required String projectId,
+    required String workingDirectory,
   }) async* {
     if (responseDelay > Duration.zero) {
       await Future<void>.delayed(responseDelay);
@@ -240,6 +520,8 @@ class ChatViewModel extends ChangeNotifier {
       userPrompt,
       threadId: threadId,
       threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: workingDirectory,
     );
   }
 
@@ -298,6 +580,13 @@ $error
   void dispose() {
     _isDisposed = true;
     _activeRequestIds.clear();
+    for (final completer in _reviewCompleters.values) {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    }
+    _reviewCompleters.clear();
+    _pendingReviews.clear();
     for (final subscription in _replySubscriptions.values) {
       unawaited(subscription.cancel());
     }

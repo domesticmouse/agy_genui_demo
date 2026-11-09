@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:antigravity/antigravity.dart';
+import 'package:path/path.dart' as p;
 
 import '../../domain/models/chat_models.dart';
 
@@ -66,8 +67,19 @@ typedef AntigravitySessionBuilder = AntigravityAgentSession Function(
   required String threadTitle,
 });
 
-/// Repository supplying starter conversation threads and managing per-thread
-/// Google Antigravity SDK ([Agent] / [LocalAgentConfig]) sessions.
+/// Callback invoked when a command or tool call wants to escape the sandbox
+/// and requires explicit user review in the UI.
+typedef CommandApprovalHandler = Future<bool> Function(
+  ToolCall toolCall, {
+  required String threadId,
+  required String threadTitle,
+  required String projectId,
+  required String workingDirectory,
+  required String reason,
+});
+
+/// Repository supplying starter projects and conversation threads, and managing
+/// per-thread Google Antigravity SDK ([Agent] / [LocalAgentConfig]) sessions.
 class ChatRepository {
   ChatRepository({
     AntigravitySessionBuilder? sessionBuilder,
@@ -76,6 +88,7 @@ class ChatRepository {
     this.binaryPath,
     this.workspaces,
     this.policies,
+    this.commandApprovalHandler,
     this.systemInstructionText = defaultSystemInstructions,
   }) : _sessionBuilder = sessionBuilder ?? _defaultSessionBuilder;
 
@@ -95,7 +108,15 @@ class ChatRepository {
   final List<Policy>? policies;
   final String systemInstructionText;
 
+  /// Handler invoked when a command requests to escape the sandbox (`BypassSandbox`
+  /// or accessing paths outside the project's working directory).
+  CommandApprovalHandler? commandApprovalHandler;
+
   final Map<String, AntigravityAgentSession> _sessions = {};
+  final Map<
+    String,
+    ({String threadTitle, String projectId, String workingDirectory})
+  > _sessionMetadata = {};
 
   static AntigravityAgentSession _defaultSessionBuilder(
     LocalAgentConfig config, {
@@ -108,11 +129,207 @@ class ChatRepository {
   /// Active thread IDs that currently have an initialized [AntigravityAgentSession].
   Iterable<String> get activeSessionThreadIds => _sessions.keys;
 
+  /// Resolves a safe default project working directory.
+  ///
+  /// When launched from a terminal (`flutter run -d macos`), uses
+  /// `Directory.current.absolute.path`. When launched as a macOS `.app` bundle
+  /// from Finder/LaunchServices (where `Directory.current` is `/`), falls back
+  /// to the user's `HOME` directory or `Directory.systemTemp`.
+  static String resolveDefaultWorkingDirectory() {
+    final cwd = Directory.current.absolute.path;
+    if (cwd != '/' && cwd.isNotEmpty) {
+      return p.normalize(cwd);
+    }
+    final home = Platform.environment['HOME'];
+    if (home != null && home.trim().isNotEmpty) {
+      return p.normalize(Directory(home.trim()).absolute.path);
+    }
+    return p.normalize(Directory.systemTemp.absolute.path);
+  }
+
+  /// Normalizes a user-supplied project working directory path, expanding `~`
+  /// and resolving relative paths.
+  static String normalizeProjectDirectory(String rawPath) {
+    final trimmed = rawPath.trim();
+    if (trimmed.isEmpty) {
+      return resolveDefaultWorkingDirectory();
+    }
+    final normalized = normalizeWorkspacePath(trimmed);
+    return normalized.isEmpty ? resolveDefaultWorkingDirectory() : normalized;
+  }
+
+  /// Extracts the command line string from a `run_command` [ToolCall].
+  static String extractCommandLine(ToolCall toolCall) {
+    final args = toolCall.args;
+    final raw =
+        args['CommandLine'] ??
+        args['command_line'] ??
+        args['command'] ??
+        args['cmd'];
+    return raw?.toString().trim() ?? '';
+  }
+
+  /// Extracts an optional short summary from a `run_command` [ToolCall].
+  static String? extractToolSummary(ToolCall toolCall) {
+    final args = toolCall.args;
+    final raw = args['toolSummary'] ?? args['tool_summary'];
+    final summary = raw?.toString().trim();
+    return (summary != null && summary.isNotEmpty) ? summary : null;
+  }
+
+  /// Returns `true` if [toolCall] explicitly sets `BypassSandbox: true` (or
+  /// equivalent snake_case key).
+  static bool requestsBypassSandboxFlag(ToolCall toolCall) {
+    final args = toolCall.args;
+    final val =
+        args['BypassSandbox'] ??
+        args['bypass_sandbox'] ??
+        args['disable_sandbox'];
+    if (val is bool) return val;
+    if (val is String) return val.toLowerCase() == 'true';
+    return false;
+  }
+
+  static const List<String> _standardSystemExecutablePrefixes = [
+    '/bin/',
+    '/usr/bin/',
+    '/sbin/',
+    '/usr/sbin/',
+    '/dev/null',
+  ];
+
+  /// Finds the first path token in [commandLine] that resolves outside
+  /// [workspaces], or returns `null` if all referenced paths remain inside the
+  /// workspace.
+  static String? findOutsideWorkspacePathInCommand(
+    String commandLine,
+    List<String> workspaces,
+  ) {
+    if (commandLine.isEmpty || workspaces.isEmpty) return null;
+    final primaryWorkspace = workspaces.first;
+    final tokens = commandLine
+        .split(RegExp(r'''[\s"'`;|&><()]+'''))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty);
+
+    for (final token in tokens) {
+      String? candidatePath;
+      if (token == '~' || token.startsWith('~/')) {
+        candidatePath = normalizeWorkspacePath(token);
+      } else if (token == '..' ||
+          token.startsWith('../') ||
+          token.contains('/../')) {
+        candidatePath = p.normalize(p.join(primaryWorkspace, token));
+      } else if (token.startsWith('/') && token.length > 1) {
+        final isStandardBinary = _standardSystemExecutablePrefixes.any(
+          (prefix) => token == prefix || token.startsWith(prefix),
+        );
+        if (!isStandardBinary) {
+          candidatePath = p.normalize(token);
+        }
+      }
+
+      if (candidatePath != null && candidatePath.isNotEmpty) {
+        final insideAny = workspaces.any(
+          (ws) => isPathInWorkspace(candidatePath!, ws),
+        );
+        if (!insideAny) {
+          return token;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Returns `true` when a `run_command` [toolCall] wants to escape the
+  /// sandbox — either by setting `BypassSandbox: true` or by targeting a path
+  /// outside [workspaces].
+  static bool isSandboxEscapeToolCall(
+    ToolCall toolCall,
+    List<String> workspaces,
+  ) {
+    if (requestsBypassSandboxFlag(toolCall)) {
+      return true;
+    }
+    final cmd = extractCommandLine(toolCall);
+    return findOutsideWorkspacePathInCommand(cmd, workspaces) != null;
+  }
+
+  /// Builds a human-readable explanation for why [toolCall] requires user
+  /// sandbox-escape review.
+  static String describeSandboxEscapeReason(
+    ToolCall toolCall,
+    List<String> workspaces, {
+    String? harnessReason,
+  }) {
+    if (requestsBypassSandboxFlag(toolCall)) {
+      return 'Program requested BypassSandbox: true to run outside the OS sandbox '
+          '(grants full filesystem and network access).';
+    }
+    final cmd = extractCommandLine(toolCall);
+    final outsidePath = findOutsideWorkspacePathInCommand(cmd, workspaces);
+    if (outsidePath != null) {
+      final wsDisplay = workspaces.isNotEmpty ? workspaces.first : 'workspace';
+      return 'Command references "$outsidePath" outside the project working directory ($wsDisplay).';
+    }
+    if (harnessReason != null && harnessReason.trim().isNotEmpty) {
+      return harnessReason.trim();
+    }
+    return 'Program requested to run outside the project sandbox and requires user review.';
+  }
+
+  /// Invokes the registered [commandApprovalHandler] for a sandbox-escaping
+  /// [toolCall]. Fails closed (`false`) if no handler is registered.
+  Future<bool> requestCommandApproval(
+    ToolCall toolCall, {
+    required String threadId,
+    required String threadTitle,
+    String projectId = ChatThread.defaultProjectId,
+    String? workingDirectory,
+    String? reason,
+  }) async {
+    final handler = commandApprovalHandler;
+    if (handler == null) {
+      return false;
+    }
+    final effectiveDir = normalizeProjectDirectory(
+      workingDirectory ??
+          (workspaces != null && workspaces!.isNotEmpty
+              ? workspaces!.first
+              : resolveDefaultWorkingDirectory()),
+    );
+    final resolvedReason = describeSandboxEscapeReason(
+      toolCall,
+      [effectiveDir],
+      harnessReason: reason,
+    );
+    return await handler(
+      toolCall,
+      threadId: threadId,
+      threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: effectiveDir,
+      reason: resolvedReason,
+    );
+  }
+
   /// Builds the [LocalAgentConfig] used to initialize an Antigravity [Agent]
-  /// for the specified conversation thread.
+  /// for the specified conversation thread and project working directory.
+  ///
+  /// - Sets `workspaces: [resolvedWorkingDirectory]` so the local harness uses
+  ///   the project's working directory.
+  /// - Enables the OS-level command sandbox via
+  ///   `RunCommandConfig(enableSandbox: true)`.
+  /// - Combines `workspaceOnly(resolvedWorkspaces)` (confining file tools to
+  ///   the project directory), an `askUser` policy on `run_command` for commands
+  ///   that want to escape the sandbox (`BypassSandbox: true` or outside-workspace
+  ///   paths), `auto(handler: ...)` for harness-flagged sandbox escapes, and
+  ///   `allowAll()` so in-sandbox commands run smoothly.
   LocalAgentConfig buildAgentConfig({
     required String threadId,
     required String threadTitle,
+    String projectId = ChatThread.defaultProjectId,
+    String? workingDirectory,
   }) {
     const definedApiKey = String.fromEnvironment('GEMINI_API_KEY');
     final resolvedApiKey = apiKey ??
@@ -120,40 +337,117 @@ class ChatRepository {
             ? definedApiKey
             : Platform.environment['GEMINI_API_KEY']);
 
+    final List<String> resolvedWorkspaces;
+    if (workingDirectory != null && workingDirectory.trim().isNotEmpty) {
+      resolvedWorkspaces = [normalizeProjectDirectory(workingDirectory)];
+    } else if (workspaces != null && workspaces!.isNotEmpty) {
+      resolvedWorkspaces = normalizeWorkspacePaths(workspaces);
+    } else {
+      resolvedWorkspaces = [resolveDefaultWorkingDirectory()];
+    }
+    final activeDir = resolvedWorkspaces.first;
+
+    final effectivePolicies = policies ??
+        <Policy>[
+          ...workspaceOnly(resolvedWorkspaces),
+          askUser(
+            BuiltinTools.runCommand.value,
+            name: 'review_sandbox_escape',
+            reason:
+                'Command wants to escape the project sandbox and requires user review.',
+            when: (toolCall) =>
+                isSandboxEscapeToolCall(toolCall, resolvedWorkspaces),
+            handler: (toolCall) => requestCommandApproval(
+              toolCall,
+              threadId: threadId,
+              threadTitle: threadTitle,
+              projectId: projectId,
+              workingDirectory: activeDir,
+            ),
+          ) as Policy,
+          auto(
+            name: 'auto_sandbox_guard',
+            handler: (ToolCall toolCall, [String? reason]) =>
+                requestCommandApproval(
+                  toolCall,
+                  threadId: threadId,
+                  threadTitle: threadTitle,
+                  projectId: projectId,
+                  workingDirectory: activeDir,
+                  reason: reason,
+                ),
+          ),
+          allowAll(),
+        ];
+
     return LocalAgentConfig(
       apiKey: (resolvedApiKey != null && resolvedApiKey.isNotEmpty)
           ? resolvedApiKey
           : null,
       model: model,
       binaryPath: binaryPath,
-      workspaces: workspaces,
-      policies: policies ?? confirmRunCommand(),
+      workspaces: resolvedWorkspaces,
+      capabilities: CapabilitiesConfig(
+        runCommandConfig: RunCommandConfig(enableSandbox: true),
+      ),
+      policies: effectivePolicies,
       systemInstructions: CustomSystemInstructions(
         title: 'MarkdownChatAssistant',
         text:
             '$systemInstructionText\n'
+            'Active project working directory: "$activeDir" (project id: $projectId).\n'
             'Active conversation thread: "$threadTitle" (id: $threadId).',
       ),
     );
   }
 
-  /// Returns the existing [AntigravityAgentSession] for [threadId], or creates
-  /// a new one configured with [buildAgentConfig].
+  /// Returns the existing [AntigravityAgentSession] for [threadId] if its
+  /// [threadTitle], [projectId], and [workingDirectory] are unchanged, or stops
+  /// the stale session and creates a new one configured with [buildAgentConfig].
   AntigravityAgentSession getOrCreateSession({
     required String threadId,
     required String threadTitle,
+    String projectId = ChatThread.defaultProjectId,
+    String? workingDirectory,
   }) {
-    return _sessions.putIfAbsent(threadId, () {
-      final config = buildAgentConfig(
-        threadId: threadId,
-        threadTitle: threadTitle,
-      );
-      return _sessionBuilder(
-        config,
-        threadId: threadId,
-        threadTitle: threadTitle,
-      );
-    });
+    final resolvedDir = normalizeProjectDirectory(
+      workingDirectory ??
+          (workspaces != null && workspaces!.isNotEmpty
+              ? workspaces!.first
+              : resolveDefaultWorkingDirectory()),
+    );
+    final desiredMeta = (
+      threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: resolvedDir,
+    );
+
+    final existingSession = _sessions[threadId];
+    final existingMeta = _sessionMetadata[threadId];
+    if (existingSession != null && existingMeta == desiredMeta) {
+      return existingSession;
+    }
+
+    if (existingSession != null) {
+      _sessions.remove(threadId);
+      _sessionMetadata.remove(threadId);
+      unawaited(existingSession.stop());
+    }
+
+    final config = buildAgentConfig(
+      threadId: threadId,
+      threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: resolvedDir,
+    );
+    final newSession = _sessionBuilder(
+      config,
+      threadId: threadId,
+      threadTitle: threadTitle,
+    );
+    _sessions[threadId] = newSession;
+    _sessionMetadata[threadId] = desiredMeta;
+    return newSession;
   }
 
   /// Sends [userPrompt] to the thread's Antigravity [AntigravityAgentSession]
@@ -162,10 +456,14 @@ class ChatRepository {
     String userPrompt, {
     required String threadId,
     required String threadTitle,
+    String projectId = ChatThread.defaultProjectId,
+    String? workingDirectory,
   }) async* {
     final session = getOrCreateSession(
       threadId: threadId,
       threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: workingDirectory,
     );
     yield* session.sendPrompt(userPrompt);
   }
@@ -176,12 +474,16 @@ class ChatRepository {
     String userPrompt, {
     required String threadId,
     required String threadTitle,
+    String projectId = ChatThread.defaultProjectId,
+    String? workingDirectory,
   }) async {
     final buffer = StringBuffer();
     await for (final chunk in streamAssistantReply(
       userPrompt,
       threadId: threadId,
       threadTitle: threadTitle,
+      projectId: projectId,
+      workingDirectory: workingDirectory,
     )) {
       buffer.write(chunk);
     }
@@ -190,6 +492,7 @@ class ChatRepository {
 
   /// Stops and removes the [AntigravityAgentSession] associated with [threadId].
   Future<void> closeThreadSession(String threadId) async {
+    _sessionMetadata.remove(threadId);
     final session = _sessions.remove(threadId);
     if (session != null) {
       await session.stop();
@@ -200,18 +503,48 @@ class ChatRepository {
   Future<void> dispose() async {
     final activeSessions = _sessions.values.toList();
     _sessions.clear();
+    _sessionMetadata.clear();
     for (final session in activeSessions) {
       await session.stop();
     }
   }
 
-  /// Returns starter threads showcasing rich GitHub-Flavored Markdown features
-  /// and the Antigravity SDK backend architecture.
+  /// Returns starter projects with explicit working directories for the
+  /// Antigravity local harness.
+  List<ChatProject> getStarterProjects() {
+    final now = DateTime(2026, 11, 9, 10, 0);
+    final defaultDir =
+        (workspaces != null && workspaces!.isNotEmpty)
+            ? normalizeProjectDirectory(workspaces!.first)
+            : resolveDefaultWorkingDirectory();
+    final tempDir = p.normalize(Directory.systemTemp.absolute.path);
+
+    return [
+      ChatProject(
+        id: ChatThread.defaultProjectId,
+        name: p.basename(defaultDir).isEmpty
+            ? 'Default Workspace'
+            : p.basename(defaultDir),
+        workingDirectory: defaultDir,
+        createdAt: now,
+      ),
+      ChatProject(
+        id: 'project-sandbox-lab',
+        name: 'Sandbox Scratchpad',
+        workingDirectory: tempDir,
+        createdAt: now.subtract(const Duration(hours: 1)),
+      ),
+    ];
+  }
+
+  /// Returns starter threads showcasing rich GitHub-Flavored Markdown features,
+  /// project working directories, and the Antigravity SDK sandbox architecture.
   List<ChatThread> getStarterThreads() {
     final now = DateTime(2026, 11, 9, 10, 0);
     return [
       ChatThread(
         id: 'thread-showcase',
+        projectId: ChatThread.defaultProjectId,
         title: 'Markdown Showcase',
         updatedAt: now,
         isAutoTitled: true,
@@ -239,11 +572,13 @@ You can combine **bold text**, *italic emphasis*, ~~strikethrough corrections~~,
 
 ## Lists & Workflows
 
+- Project-scoped working directories (`workspaces`) for the Antigravity `localharness`
+- Sandboxed command execution (`RunCommandConfig(enableSandbox: true)`) with interactive user review for sandbox-escaping programs
 - Collapsible macOS split-view conversation sidebar
 - Per-thread Antigravity `Agent` sessions and typing indicators
 - Automatic thread titling from your first message
-  1. Create a new thread
-  2. Send a prompt
+  1. Select or create a project working directory
+  2. Create a new thread and send a prompt
   3. Watch the sidebar title and streaming Markdown reply update automatically
 
 ## Fenced Code Blocks
@@ -270,6 +605,7 @@ void main() {
       ),
       ChatThread(
         id: 'thread-architecture',
+        projectId: ChatThread.defaultProjectId,
         title: 'macOS Desktop Architecture',
         updatedAt: now.subtract(const Duration(hours: 2)),
         isAutoTitled: true,
@@ -287,7 +623,7 @@ void main() {
             timestamp: now.subtract(const Duration(hours: 2)),
             content: '''### Keyboard, Theme & Antigravity Backend Architecture
 
-Each conversation thread manages an isolated Antigravity `Agent` configured via `LocalAgentConfig` and streams tokens from `ChatResponse.textStream`.
+Each conversation thread manages an isolated Antigravity `Agent` configured via `LocalAgentConfig` with the active project's working directory (`workspaces`), OS-level command sandboxing (`RunCommandConfig(enableSandbox: true)`), `workspaceOnly` file containment, and user review gates for commands that request to escape the sandbox.
 
 We also guard `Enter` key submission against active **IME composition** regions so international input methods work reliably on macOS:
 
