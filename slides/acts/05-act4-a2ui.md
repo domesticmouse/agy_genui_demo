@@ -322,7 +322,7 @@ fit: both
 
 <!-- S35 -->
 <!--
-In Clip 4.3, agy inspects what our codebase already wires up versus what A2UI v1.0 is capable of, and proposes six concrete options tailored to this application. Let us walk through all six suggestions across the next three slides.
+In Clip 4.3, agy inspects what our codebase already wires up versus what A2UI v1.0 is capable of, and proposes six concrete options tailored to this application. Let us walk through all six suggestions across the next two slides.
 -->
 
 ---
@@ -330,29 +330,36 @@ layout: default
 ---
 
 <!-- S36 -->
-<div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0"><code class="text-cyan-300">agy</code>'s Suggestions (1 of 3): Action Loops &amp; Developer Catalogue</h2>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-2xl font-bold m-0"><code class="text-cyan-300">agy</code>'s Suggestions (1 of 2): Action Loops, Developer Widgets &amp; Canvas</h2>
 </div>
 
-<ol class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
-  <li v-click>
-    <strong class="text-white text-base">Option 1: Live Two-Way Action Loop</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Clicking a button on an interactive surface sends the user's action and current form state back to the agent.</li>
-      <li>Shows a compact "Action Pill" in the chat feed and lets the agent update the existing surface in place.</li>
+<ol class="space-y-3.5 text-xs text-gray-200 list-decimal pl-5 mt-3 leading-relaxed">
+  <li v-click class="p-3 rounded-lg bg-cyan-950/15 border border-cyan-500/30">
+    <strong class="text-cyan-300 text-sm">Option 1: Live Two-Way Action Loop</strong>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li>Clicking a button on an interactive <code class="text-cyan-300">A2uiSurface</code> dispatches the user's <code class="text-amber-300">ActionMessage</code> and current form state back to the agent.</li>
+      <li>Renders a compact <span class="text-cyan-200 font-semibold">"Action Pill"</span> in the chat feed while the agent updates the existing surface in place.</li>
     </ul>
   </li>
-  <li v-click>
-    <strong class="text-white text-base">Option 2: Custom Workspace &amp; Developer Widgets</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li><strong>Code Diff Card</strong>: Preview proposed file changes with <strong>Apply Patch</strong> and <strong>Discard</strong> buttons.</li>
-      <li><strong>Workspace File &amp; Command Cards</strong>: Clickable project file badges and proposed shell commands with editable flags.</li>
+  <li v-click class="p-3 rounded-lg bg-amber-950/15 border border-amber-500/30">
+    <strong class="text-amber-300 text-sm">Option 2: Custom Workspace &amp; Developer Widgets</strong>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li><strong class="text-amber-200">Code Diff Card</strong>: Preview proposed file changes inline with <code class="text-emerald-300">Apply Patch</code> and <code class="text-red-300">Discard</code> actions.</li>
+      <li><strong class="text-amber-200">Workspace File &amp; Command Cards</strong>: Clickable project file badges and proposed shell commands with editable flags.</li>
+    </ul>
+  </li>
+  <li v-click class="p-3 rounded-lg bg-purple-950/15 border border-purple-500/30">
+    <strong class="text-purple-300 text-sm">Option 3: Persistent Split-Pane "Surface Canvas"</strong>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li>Pin any active surface into a side-by-side <span class="text-purple-200 font-semibold">Canvas Drawer</span> where multi-turn prompts iteratively evolve a single UI.</li>
+      <li>Includes a live <code class="text-cyan-300">DataModel</code> and component tree inspector to watch <code class="text-purple-300">preact_signals</code> bindings update in real time.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-Here are Options 1 and 2 from agy. Option 1 closes the two-way action loop so clicking a button on an A2UI surface sends the action and current form state back to the agent, letting the agent update the surface in place. Option 2 extends the widget catalogue with custom developer components like a Code Diff card, Workspace File card, or Command Runner card with editable flags.
+Here are the first three options from agy. Option 1 closes the two-way action loop so clicking a button on an A2UI surface sends the ActionMessage and current form state back to the agent, letting the agent update the surface in place. Option 2 extends the widget catalogue with custom developer components like a Code Diff card, Workspace File card, or Command Runner card with editable flags. Option 3 adds a persistent split-pane Surface Canvas alongside inline chat bubbles, complete with a live data model inspector so you can watch state bindings update as you type.
 -->
 
 ---
@@ -360,59 +367,42 @@ layout: default
 ---
 
 <!-- S37 -->
-<div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0"><code class="text-cyan-300">agy</code>'s Suggestions (2 of 3): Persistent Canvas &amp; Self-Healing</h2>
+<div class="flex items-center gap-3 mb-4">
+  <h2 class="text-2xl font-bold m-0"><code class="text-cyan-300">agy</code>'s Suggestions (2 of 2): Self-Healing, Clarification Forms &amp; RPCs</h2>
 </div>
 
-<ol start="3" class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
-  <li v-click>
-    <strong class="text-white text-base">Option 3: Persistent Split-Pane "Surface Canvas"</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Pin any active surface into a side-by-side canvas drawer where multi-turn prompts iteratively evolve a single UI.</li>
-      <li>Includes a live data model and component tree inspector to watch state bindings update in real time.</li>
+<ol start="4" class="space-y-3.5 text-xs text-gray-200 list-decimal pl-5 mt-3 leading-relaxed">
+  <li v-click class="p-3 rounded-lg bg-rose-950/15 border border-rose-500/30">
+    <strong class="text-rose-300 text-sm">Option 4: Self-Healing Validation Loop</strong>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li>When the LLM emits malformed UI JSON or violates a component schema, <code class="text-rose-300">PayloadValidator</code> automatically rolls back the invalid block.</li>
+      <li>Feeds the schema validation error straight back to the agent so it can repair its own surface automatically.</li>
     </ul>
   </li>
-  <li v-click>
-    <strong class="text-white text-base">Option 4: Self-Healing Validation Loop</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>When the LLM emits malformed UI JSON or violates a component schema, the invalid block is automatically rolled back.</li>
-      <li>Sends the validation error back to the agent so it can repair its own surface automatically.</li>
+  <li v-click class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/40">
+    <div class="flex items-center justify-between">
+      <strong class="text-emerald-300 text-sm">Option 5: Interactive Clarification &amp; Parameter Forms</strong>
+      <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300">Selected for Act 4.4</span>
+    </div>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li>Instead of plain-text questions, the agent streams an interactive form (<code class="text-cyan-300">ChoicePicker</code> chips, validated <code class="text-cyan-300">TextField</code>s, <code class="text-cyan-300">Slider</code>s, and a submit button).</li>
+      <li>Submitting the form packages the bound <code class="text-emerald-300">DataModel</code> and dispatches the structured answers back to the agent.</li>
+    </ul>
+  </li>
+  <li v-click class="p-3 rounded-lg bg-amber-950/20 border border-amber-500/40">
+    <div class="flex items-center justify-between">
+      <strong class="text-amber-300 text-sm">Option 6: A2UI Express DSL &amp; Bidirectional RPCs</strong>
+      <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/40 text-amber-300">Selected for Act 4.4</span>
+    </div>
+    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
+      <li>Switch between standard <code class="text-cyan-300">&lt;a2ui-json&gt;</code> and the compact, token-saving <code class="text-purple-300">&lt;a2ui-express&gt;</code> DSL.</li>
+      <li>Register custom <code class="text-amber-300">FunctionImplementation</code> RPCs so the agent and Flutter UI can invoke functions across the boundary.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-Options 3 and 4 go even deeper. Option 3 adds a persistent split-pane Surface Canvas alongside inline chat bubbles, complete with a live data model inspector so you can watch state bindings update as you type. Option 4 wires up a self-healing validation loop: whenever an invalid UI block is rolled back, the app sends the validation error straight back to the agent so it can repair its own surface.
--->
-
----
-layout: default
----
-
-<!-- S38 -->
-<div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0"><code class="text-cyan-300">agy</code>'s Suggestions (3 of 3): Clarification Forms, Express DSL &amp; RPCs</h2>
-</div>
-
-<ol start="5" class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
-  <li v-click>
-    <strong class="text-white text-base">Option 5: Interactive Clarification &amp; Parameter Forms</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Instead of asking plain-text clarifying questions, the agent streams an interactive form (choice chips, validated text fields, sliders, and a submit button).</li>
-      <li>Submitting the form sends the structured answers straight back to the agent.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white text-base">Option 6: A2UI Express DSL &amp; Bidirectional RPCs</strong>
-    <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Switch between standard <code class="text-gray-200">&lt;a2ui-json&gt;</code> and the compact, token-saving <code class="text-gray-200">&lt;a2ui-express&gt;</code> DSL.</li>
-      <li>Register bidirectional RPC functions so the agent and Flutter UI can invoke functions across the boundary.</li>
-    </ul>
-  </li>
-</ol>
-
-<!--
-And here are Options 5 and 6! Option 5 teaches the agent to stream interactive clarifying forms — with choice chips, validated text fields, sliders, and a submit button — whenever a prompt has multiple valid interpretations. Option 6 introduces the compact A2UI Express DSL and bidirectional RPC functions so the agent can invoke client-side Dart functions and receive structured responses. We loved Options 5 and 6 so much that we asked agy to build both of them right on the spot.
+And here are Options 4, 5, and 6! Option 4 wires up a self-healing validation loop: whenever an invalid UI block is rolled back by PayloadValidator, the app sends the validation error straight back to the agent so it can repair its own surface. Option 5 teaches the agent to stream interactive clarifying forms — with ChoicePicker chips, validated text fields, sliders, and a submit button — whenever a prompt has multiple valid interpretations. Option 6 introduces the compact A2UI Express DSL and custom FunctionImplementation RPCs so the agent can invoke client-side Dart functions and receive structured responses. We loved Options 5 and 6 so much that we asked agy to build both of them right on the spot.
 -->
 
 ---
