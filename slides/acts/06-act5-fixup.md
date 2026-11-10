@@ -270,9 +270,6 @@ layout: default
     <div class="p-2.5 bg-white rounded-xl shadow-inner">
       <img src="/images/deck-qr.svg" alt="QR Code for https://domesticmouse.github.io/agy_genui_demo/" class="w-44 h-44 object-contain" />
     </div>
-    <a href="https://domesticmouse.github.io/agy_genui_demo/" target="_blank" class="text-[11px] font-mono text-cyan-300 underline break-all">
-      domesticmouse.github.io/agy_genui_demo/
-    </a>
   </div>
 </div>
 
