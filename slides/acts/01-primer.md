@@ -8,7 +8,7 @@ class: text-center
   <h1 class="text-5xl font-extrabold tracking-tight text-white mb-3">
     Flutter, Antigravity SDK, and GenUI
   </h1>
-  <p class="text-2xl text-gray-300 font-light max-w-2xl">
+  <p class="text-3xl text-gray-300 font-light max-w-2xl">
     A vibe coding exploration
   </p>
 
@@ -35,7 +35,7 @@ class: text-center
   <h1 class="text-5xl font-extrabold tracking-tight text-white mb-3">
     Flutter, Antigravity SDK, and <del class="text-gray-500 decoration-red-400/80">GenUI</del> <span class="text-cyan-400">A2UI</span>
   </h1>
-  <p class="text-2xl text-gray-300 font-light max-w-2xl">
+  <p class="text-3xl text-gray-300 font-light max-w-2xl">
     A vibe coding exploration
   </p>
 
