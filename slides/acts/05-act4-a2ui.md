@@ -137,7 +137,7 @@ fit: both
 
 <!-- S26 -->
 <!--
-In Clip 4.2, agy traces the pubspecs, type parameters, and class boundaries across all three packages and synthesises a crystal-clear architectural map. Because that terminal report scrolls by fast, let us take the next seven slides to unpack what agy discovered.
+In Clip 4.2, agy traces the pubspecs, type parameters, and class boundaries across all three packages and synthesises a crystal-clear architectural map. Because that terminal report scrolls by fast, let us take the next four slides to unpack what agy discovered.
 -->
 
 ---
@@ -146,7 +146,7 @@ layout: default
 
 <!-- S27 -->
 <div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0">Overview (1 of 7): How the 3 A2UI Packages Layer Together</h2>
+  <h2 class="text-2xl font-bold m-0">Overview (1 of 4): How the 3 A2UI Packages Layer Together</h2>
 </div>
 
 <ol class="space-y-4 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
@@ -178,119 +178,9 @@ Here is the big-picture dependency graph. At the foundation sits a2ui_core, whic
 -->
 
 ---
-layout: default
----
-
-<!-- S28 -->
-<div class="flex items-center gap-3 mb-4">
-  <h2 class="text-2xl font-bold m-0">Package 1 (2 of 7): <code class="text-cyan-300">a2ui_core</code> &mdash; Headless Protocol &amp; Signals</h2>
-</div>
-
-<ol class="space-y-3 text-xs text-gray-200 list-decimal pl-6 mt-3 leading-relaxed">
-  <li v-click>
-    <strong class="text-white text-sm">Wire Protocol &amp; Envelopes</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
-      <li><code class="text-cyan-300">AgentToRendererMessage</code>: <code class="text-gray-200">CreateSurfaceMessage</code>, <code class="text-gray-200">UpdateComponentsMessage</code>, <code class="text-gray-200">UpdateDataModelMessage</code>, <code class="text-gray-200">DeleteSurfaceMessage</code>, and <code class="text-gray-200">CallRendererFunctionMessage</code>.</li>
-      <li><code class="text-amber-300">RendererToAgentMessage</code>: <code class="text-gray-200">ActionMessage</code>, <code class="text-gray-200">ErrorMessage</code>, and <code class="text-gray-200">FunctionResponseMessage</code>.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white text-sm">Catalogue Specification</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
-      <li>Defines generic <code class="text-cyan-300">Catalog&lt;T extends ComponentApi, F extends FunctionApi&gt;</code> and <code class="text-cyan-300">BasicCatalog.v1_0</code> (JSON Schemas for components + client-side functions like <code class="text-gray-200">formatString</code>, <code class="text-gray-200">required</code>, <code class="text-gray-200">regex</code>).</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white text-sm">Message Routing &amp; Validation</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
-      <li><code class="text-cyan-300">MessageProcessor&lt;T&gt;</code> validates messages against catalogue schemas (<code class="text-gray-200">PayloadValidator</code>) and component graph topology (<code class="text-gray-200">ValidationConfig</code>), applying updates to <code class="text-gray-200">SurfaceGroupModel&lt;T&gt;</code>.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white text-sm">Reactive Surface &amp; Node Resolution</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-0.5 text-gray-300">
-      <li><code class="text-cyan-300">SurfaceModel&lt;T&gt;</code>, <code class="text-cyan-300">DataModel</code>, <code class="text-cyan-300">GenericBinder</code>, and <code class="text-cyan-300">NodeResolver&lt;T&gt;</code> turn a flat component map and JSON Pointer data model (<code class="text-emerald-300">@path</code>, <code class="text-emerald-300">@call</code>) into a reactive tree of <code class="text-gray-200">ComponentNode&lt;T&gt;</code> backed by <code class="text-gray-200">preact_signals</code>.</li>
-    </ul>
-  </li>
-</ol>
-
-<!--
-Let us look at Package 1: a2ui_core. First, it defines the typed wire envelopes in both directions: AgentToRendererMessage and RendererToAgentMessage. Second, it defines the generic Catalog specification and the standard BasicCatalog.v1_0 JSON schemas. Third, MessageProcessor validates incoming envelopes against both the JSON schema and the component graph topology before mutating SurfaceGroupModel. Fourth, SurfaceModel, DataModel, and NodeResolver turn flat component maps and JSON pointer bindings into a live reactive tree backed by preact_signals.
--->
-
----
-layout: default
----
-
-<!-- S29 -->
-<div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0">Package 2 (3 of 7): <code class="text-amber-300">a2ui_agent</code> &mdash; Prompting, Parsing &amp; JSON Healing</h2>
-</div>
-
-<ol class="space-y-4 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
-  <li v-click>
-    <strong class="text-white">Capability Negotiation (<code class="text-amber-300">A2uiGenerator</code>)</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li>Matches the client's <code class="text-cyan-300">A2uiRendererCapabilities</code> against available <code class="text-cyan-300">CatalogConfig</code>s (optionally pruning unused components via <code class="text-gray-200">PruningTransformer</code>) to construct an <code class="text-amber-300">A2uiRequestProcessor</code>.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white">System Prompt Generation (<code class="text-amber-300">promptSnippet</code>)</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li><code class="text-amber-300">a2uiRequestProcessor.promptSnippet</code> emits the system instructions and <code class="text-gray-200">---BEGIN A2UI JSON SCHEMA---</code> teaching the LLM to output <code class="text-cyan-300">&lt;a2ui-json&gt;</code> (<code class="text-gray-200">DirectJsonFormatFactory</code>) or the compact A2UI Express DSL (<code class="text-gray-200">ExpressFormatFactory</code>).</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white">Streaming LLM Parser &amp; JSON Healer</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li><code class="text-amber-300">DirectJsonParser</code> and <code class="text-amber-300">DirectJsonContinuingResponseStream</code> split raw LLM token streams into prose <code class="text-cyan-300">TextPart</code>, healed incremental <code class="text-emerald-300">A2uiPart</code> (<code class="text-gray-200">List&lt;AgentToRendererMessage&gt;</code>), and <code class="text-red-300">ErrorPart</code>.</li>
-      <li>Validates against <code class="text-cyan-300">RendererState</code> with automatic transactional rollback if a block fails validation.</li>
-    </ul>
-  </li>
-</ol>
-
-<!--
-Package 2 is a2ui_agent. First, A2uiGenerator negotiates capabilities between the client renderer and the available catalogues to build an A2uiRequestProcessor. Second, promptSnippet generates the exact system instructions and JSON schemas that teach the LLM how to emit a2ui-json blocks or the compact Express DSL. Third, as tokens stream back from the LLM, DirectJsonParser separates Markdown prose from a2ui-json blocks, heals incomplete streaming JSON on the fly so UI components appear incrementally, and performs transactional rollback if an LLM block fails validation.
--->
-
----
-layout: default
----
-
-<!-- S30 -->
-<div class="flex items-center gap-3 mb-5">
-  <h2 class="text-2xl font-bold m-0">Package 3 (4 of 7): <code class="text-emerald-300">a2ui_flutter</code> &mdash; Flutter Widget Adapter</h2>
-</div>
-
-<ol class="space-y-4 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
-  <li v-click>
-    <strong class="text-white">Concrete Component Type (<code class="text-emerald-300">ComponentImplementation</code>)</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li>Subclasses <code class="text-cyan-300">a2ui_core</code>'s <code class="text-cyan-300">ComponentApi</code>, attaching a Flutter <code class="text-emerald-300">ComponentWidgetBuilder</code> (<code class="text-gray-200">Widget Function(BuildContext, ComponentNode, ComponentProps, ChildWidgetBuilder)</code>) to each component's JSON Schema.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white">Flutter Basic Catalogue (<code class="text-emerald-300">basicCatalog()</code>)</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li>Returns a <code class="text-emerald-300">CatalogImplementation</code> (<code class="text-gray-200">Catalog&lt;ComponentImplementation, FunctionImplementation&gt;</code>) implementing all 18 A2UI v1.0 basic components: <code class="text-gray-200">Card</code>, <code class="text-gray-200">Row</code>, <code class="text-gray-200">Column</code>, <code class="text-gray-200">List</code>, <code class="text-gray-200">Tabs</code>, <code class="text-gray-200">Modal</code>, <code class="text-gray-200">Text</code>, <code class="text-gray-200">Image</code>, <code class="text-gray-200">Icon</code>, <code class="text-gray-200">Video</code>, <code class="text-gray-200">AudioPlayer</code>, <code class="text-gray-200">Divider</code>, <code class="text-gray-200">Button</code>, <code class="text-gray-200">TextField</code>, <code class="text-gray-200">CheckBox</code>, <code class="text-gray-200">ChoicePicker</code>, <code class="text-gray-200">Slider</code>, and <code class="text-gray-200">DateTimeInput</code>.</li>
-    </ul>
-  </li>
-  <li v-click>
-    <strong class="text-white">Reactive Surface Widget (<code class="text-emerald-300">A2uiSurface</code>)</strong>
-    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
-      <li>Takes a <code class="text-cyan-300">SurfaceModel&lt;ComponentImplementation&gt;</code>, attaches a <code class="text-cyan-300">NodeResolver&lt;ComponentImplementation&gt;</code>, and rebuilds only affected widget subtrees via <code class="text-emerald-300">SignalState</code> as signals change.</li>
-    </ul>
-  </li>
-</ol>
-
-<!--
-Package 3 is a2ui_flutter. It subclasses a2ui_core's ComponentApi with ComponentImplementation, pairing each JSON Schema with a Flutter ComponentWidgetBuilder. Its basicCatalog function gives you ready-made Material 3 implementations of all 18 A2UI v1.0 basic components, and the A2uiSurface widget mounts any SurfaceModel and granularly rebuilds only the widget subtrees whose signals change.
--->
-
----
 layout: skill-breakdown
 way: 1
-title: "Seamlines 1 & 2 (5 of 7): Catalogue Type Erasure & Stream Processing"
+title: "Seamlines 1 & 2 (2 of 4): Shared Catalogues & Stream Parsing"
 ---
 
 <!-- S31 -->
@@ -298,35 +188,33 @@ title: "Seamlines 1 & 2 (5 of 7): Catalogue Type Erasure & Stream Processing"
   <div class="grid grid-cols-2 gap-4">
     <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-cyan-300 font-semibold font-mono">
-        Seamline 1: ComponentApi &harr; ComponentImplementation
+        Seamline 1: Widget Catalogue &harr; Prompt Schema
       </div>
       <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
-        <li><code class="text-cyan-300">a2ui_core</code> is generic over <code class="text-gray-200">T extends ComponentApi</code>.</li>
-        <li><code class="text-emerald-300">a2ui_flutter</code> provides <code class="text-gray-200">basicCatalog()</code> (<code class="text-gray-200">Catalog&lt;ComponentImplementation, ...&gt;</code>).</li>
-        <li><code class="text-amber-300">CatalogConfig.fromCatalog()</code> erases the Flutter widget builder down to <code class="text-gray-200">ComponentApi</code> JSON Schemas so <code class="text-amber-300">a2ui_agent</code> never imports Flutter.</li>
+        <li>One catalogue defines both the Flutter widgets and the JSON Schemas sent to the LLM.</li>
+        <li>Strips away Flutter widget builders when generating prompts so <code class="text-amber-300">a2ui_agent</code> stays pure Dart.</li>
       </ul>
     </div>
     <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-amber-300 font-semibold font-mono">
-        Seamline 2: A2uiRequestProcessor &harr; MessageProcessor&lt;T&gt;
+        Seamline 2: LLM Stream &harr; Surface State
       </div>
       <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
-        <li><code class="text-amber-300">A2uiRequestProcessor</code> converts raw LLM chunks (<code class="text-gray-200">&lt;a2ui-json&gt;</code>) &rarr; <code class="text-gray-200">List&lt;AgentToRendererMessage&gt;</code>.</li>
-        <li><code class="text-cyan-300">MessageProcessor&lt;T&gt;</code> consumes envelopes &rarr; mutates <code class="text-gray-200">SurfaceModel&lt;T&gt;</code>.</li>
-        <li>Can run across a network wire or fused in-process via <code class="text-cyan-300">RendererState.of(renderer)</code> and <code class="text-emerald-300">StreamedAnswer</code>.</li>
+        <li><code class="text-amber-300">a2ui_agent</code> parses streaming <code class="text-gray-200">&lt;a2ui-json&gt;</code> blocks into typed protocol messages.</li>
+        <li><code class="text-cyan-300">a2ui_core</code> validates those messages and updates surface state &mdash; either in-process or across a network wire.</li>
       </ul>
     </div>
   </div>
 </div>
 
 <!--
-Now look at Seamlines 1 and 2. Seamline 1 is how a single catalogue feeds both the LLM prompt generator and the Flutter widget tree: CatalogConfig.fromCatalog erases the Flutter widget builder down to pure JSON Schemas so a2ui_agent never touches Flutter. Seamline 2 is the boundary between A2uiRequestProcessor and MessageProcessor: A2uiRequestProcessor turns raw LLM text chunks into typed AgentToRendererMessage envelopes, and MessageProcessor applies them to SurfaceModel. Those two processors can sit on opposite sides of a WebSocket, or be fused in-process via StreamedAnswer!
+Now look at Seamlines 1 and 2. Seamline 1 is how a single catalogue feeds both the LLM prompt generator and the Flutter widget tree: it strips the Flutter widget builders down to pure JSON Schemas so a2ui_agent never touches Flutter. Seamline 2 is the boundary between stream parsing and surface state: a2ui_agent turns raw LLM text chunks into typed protocol messages, and a2ui_core validates and applies them to the surface model — either in-process or across a network connection.
 -->
 
 ---
 layout: skill-breakdown
 way: 2
-title: "Seamlines 3 & 4 (6 of 7): Reactive Surface Mounting & Two-Way Actions"
+title: "Seamlines 3 & 4 (3 of 4): Reactive Rendering & Two-Way Actions"
 ---
 
 <!-- S32 -->
@@ -334,28 +222,27 @@ title: "Seamlines 3 & 4 (6 of 7): Reactive Surface Mounting & Two-Way Actions"
   <div class="grid grid-cols-2 gap-4">
     <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-emerald-300 font-semibold font-mono">
-        Seamline 3: SurfaceModel &harr; A2uiSurface
+        Seamline 3: Surface State &harr; Flutter Widgets
       </div>
       <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
-        <li><code class="text-cyan-300">AnswerSurfacePart.surface</code> yields a <code class="text-gray-200">SurfaceModel&lt;ComponentImplementation&gt;</code>.</li>
-        <li>Passed directly to <code class="text-emerald-300">A2uiSurface(key: ObjectKey(surface), surface: surface)</code>.</li>
-        <li>Wrapped in <code class="text-gray-200">A2uiMarkdown</code> for rich text rendering inside components.</li>
+        <li><code class="text-cyan-300">a2ui_core</code> holds the live reactive state for each UI surface.</li>
+        <li><code class="text-emerald-300">A2uiSurface</code> mounts that state in Flutter and rebuilds only the widgets whose signals change.</li>
       </ul>
     </div>
     <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-amber-300 font-semibold font-mono">
-        Seamline 4: WritableBinding vs. ActionMessage
+        Seamline 4: Local Edits vs. Agent Actions
       </div>
       <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
-        <li>Editing <code class="text-gray-200">@path</code> inputs mutates <code class="text-cyan-300">SurfaceModel.dataModel</code> locally via <code class="text-gray-200">WritableBinding</code> with zero network round-trips.</li>
-        <li>Clicking a <code class="text-gray-200">Button</code> resolves <code class="text-gray-200">action.event.context</code> and emits <code class="text-amber-300">ActionMessage</code> + <code class="text-gray-200">getRendererDataModel</code> (plus <code class="text-gray-200">outboundListener</code> for RPCs).</li>
+        <li>Typing into text fields or dragging sliders updates the local surface data model with zero network round-trips.</li>
+        <li>Clicking an action button packages the current form state and dispatches an action event back to the agent.</li>
       </ul>
     </div>
   </div>
 </div>
 
 <!--
-Seamlines 3 and 4 show what happens once a surface is mounted on screen. Seamline 3 passes the reactive SurfaceModel straight into A2uiSurface. Seamline 4 distinguishes local data bindings from agent actions: when a user types into a TextField or drags a Slider bound to a JSON Pointer path, WritableBinding mutates the signal in-place in a2ui_core with zero network round-trips. Only when the user clicks a Button with a NodeAction does the renderer resolve the action context, attach getRendererDataModel, and dispatch an ActionMessage back to the agent!
+Seamlines 3 and 4 show what happens once a surface is on screen. Seamline 3 passes the reactive surface state straight into the A2uiSurface widget, which granularly rebuilds only the widgets whose signals change. Seamline 4 separates local input edits from agent actions: typing into a text field or dragging a slider updates the data model locally with zero network round-trips, whereas clicking an action button packages the current state and sends an action event back to the agent.
 -->
 
 ---
@@ -364,38 +251,38 @@ layout: default
 
 <!-- S33 -->
 <div class="flex items-center gap-3 mb-4">
-  <h2 class="text-2xl font-bold m-0">When to Use Each Package (7 of 7): 4 Architecture Topologies</h2>
+  <h2 class="text-2xl font-bold m-0">When to Use Each Package (4 of 4): 4 Architecture Topologies</h2>
 </div>
 
 <ol class="space-y-3.5 text-xs text-gray-200 list-decimal pl-6 mt-3 leading-relaxed">
   <li v-click>
-    <strong class="text-white text-sm">Full-Stack / Local Agent Flutter App (<code class="text-cyan-300">agy_genui_demo</code>)</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-amber-300">a2ui_agent</code> + <code class="text-emerald-300">a2ui_flutter</code>
+    <strong class="text-white text-sm">Full-Stack / Local Agent Flutter App</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-amber-300">a2ui_agent</code> + <code class="text-emerald-300">a2ui_flutter</code>
     <ul class="list-disc pl-5 mt-1 text-gray-300">
-      <li>App both prompts/streams from the LLM (<code class="text-amber-300">StreamedAnswer</code>) and renders interactive <code class="text-emerald-300">A2uiSurface</code> widgets over shared in-memory <code class="text-cyan-300">SurfaceModel</code> state.</li>
+      <li>Prompts the LLM, parses streaming responses, and renders interactive surfaces all inside the Flutter app.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-sm">Thin Flutter Client + Remote Backend Agent</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-emerald-300">a2ui_flutter</code> <span class="text-gray-400">(No <code class="text-amber-300">a2ui_agent</code> on client)</span>
+    <strong class="text-white text-sm">Thin Flutter Client + Remote Backend Agent</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-emerald-300">a2ui_flutter</code>
     <ul class="list-disc pl-5 mt-1 text-gray-300">
-      <li>Backend server parses LLM output and streams <code class="text-cyan-300">AgentToRendererMessage</code>s over WebSockets/SSE/gRPC directly into the client's <code class="text-cyan-300">MessageProcessor&lt;ComponentImplementation&gt;</code>.</li>
+      <li>Backend handles the LLM; the Flutter client simply receives streamed protocol messages and renders widgets.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-sm">Dart Backend Agent Server / CLI (<code class="text-gray-300">shelf</code>, <code class="text-gray-300">dart_frog</code>, CLI)</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-amber-300">a2ui_agent</code> <span class="text-gray-400">(No <code class="text-emerald-300">a2ui_flutter</code>)</span>
+    <strong class="text-white text-sm">Dart Backend Agent Server or CLI</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> + <code class="text-amber-300">a2ui_agent</code>
     <ul class="list-disc pl-5 mt-1 text-gray-300">
-      <li>Pure Dart server cannot depend on <code class="text-gray-300">flutter</code>; uses <code class="text-cyan-300">BasicCatalog.v1_0()</code> + <code class="text-amber-300">A2uiRequestProcessor</code> + <code class="text-cyan-300">RendererState</code> to prompt the LLM, heal/validate <code class="text-gray-200">&lt;a2ui-json&gt;</code>, and forward envelopes to clients.</li>
+      <li>Pure Dart server (no Flutter dependency) generates prompts, heals streaming JSON, and streams validated UI messages to clients.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-sm">Custom Non-Flutter Dart Renderer / Headless Testing</strong> &mdash; <code class="text-cyan-300">a2ui_core</code> <span class="text-gray-400">(+ optional <code class="text-amber-300">a2ui_agent</code>)</span>
+    <strong class="text-white text-sm">Custom Non-Flutter Renderer or Headless Tests</strong> &mdash; <code class="text-cyan-300">a2ui_core</code>
     <ul class="list-disc pl-5 mt-1 text-gray-300">
-      <li>Subclass <code class="text-cyan-300">ComponentApi</code> and mount <code class="text-cyan-300">NodeResolver&lt;MyComponent&gt;</code> to target Jaspr, terminal UI, or headless unit tests.</li>
+      <li>Build a custom UI renderer (web DOM, terminal UI) or test surface state headlessly without Flutter.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-That clean separation gives you four distinct architecture topologies. First, a full-stack or local-agent Flutter app like our demo uses all three packages together. Second, a thin Flutter mobile or desktop client talking to a remote backend only needs a2ui_core and a2ui_flutter. Third, a pure Dart backend server built with shelf or dart_frog cannot import Flutter, so it pairs a2ui_core with a2ui_agent to generate prompts, heal streaming JSON, and validate envelopes on the server. Fourth, if you are building a non-Flutter Dart renderer like Jaspr or running headless tests, you can build directly on a2ui_core.
+That clean separation gives you four distinct architecture topologies. First, a full-stack or local-agent Flutter app like our demo uses all three packages together. Second, a thin Flutter client talking to a remote backend only needs a2ui_core and a2ui_flutter. Third, a pure Dart backend server or CLI pairs a2ui_core with a2ui_agent to prompt the LLM and stream validated UI messages without importing Flutter. Fourth, you can use a2ui_core on its own for headless testing or custom non-Flutter renderers.
 -->
 
 ---
@@ -449,25 +336,23 @@ layout: default
 
 <ol class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
   <li v-click>
-    <strong class="text-white text-base">Option 1: Live Two-Way Action Loop (<code class="text-cyan-300">Button</code> &rarr; Agent Turn + <code class="text-cyan-300">a2uiRendererDataModel</code> Sync)</strong>
+    <strong class="text-white text-base">Option 1: Live Two-Way Action Loop</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Automatically dispatch <code class="text-cyan-300">ActionMessage</code> + <code class="text-cyan-300">a2uiRendererDataModel</code> to the thread's Antigravity <code class="text-amber-300">Agent</code> when a user clicks an <code class="text-emerald-300">A2uiSurface</code> <code class="text-gray-200">Button</code>.</li>
-      <li>Show a compact user "Action Pill" in the chat feed (e.g., <code class="text-amber-300">Action: book_flight (destination: Kyoto)</code>) and let the agent mutate the existing surface in-place via <code class="text-gray-200">updateDataModel</code> / <code class="text-gray-200">updateComponents</code>.</li>
-      <li>Attach <code class="text-gray-200">renderer.getRendererDataModel(version: A2uiProtocolVersion.v1_0)</code> to regular text prompts when active surfaces have <code class="text-emerald-300">sendDataModel: true</code>.</li>
+      <li>Clicking a button on an interactive surface sends the user's action and current form state back to the agent.</li>
+      <li>Shows a compact "Action Pill" in the chat feed and lets the agent update the existing surface in place.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-base">Option 2: Custom Workspace &amp; Developer Catalogue (<code class="text-emerald-300">CatalogImplementation</code> Extensions)</strong>
+    <strong class="text-white text-base">Option 2: Custom Workspace &amp; Developer Widgets</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li><code class="text-cyan-300">CodeDiffCard</code>: Side-by-side or unified diff preview with <strong>Apply Patch</strong> / <strong>Discard</strong> action buttons.</li>
-      <li><code class="text-cyan-300">FileTreeCard</code> / <code class="text-cyan-300">WorkspaceFileCard</code>: Clickable file badges (<code class="text-gray-200">path</code>, <code class="text-gray-200">lineStart</code>, <code class="text-gray-200">lineEnd</code>, <code class="text-gray-200">summary</code>) for files in <code class="text-gray-200">ChatProject.workingDirectory</code>.</li>
-      <li><code class="text-cyan-300">CommandRunnerCard</code>: Proposes a shell command with editable flags (<code class="text-gray-200">TextField</code> / <code class="text-gray-200">CheckBox</code> bound to data model) and a <strong>Run in Workspace</strong> button.</li>
+      <li><strong>Code Diff Card</strong>: Preview proposed file changes with <strong>Apply Patch</strong> and <strong>Discard</strong> buttons.</li>
+      <li><strong>Workspace File &amp; Command Cards</strong>: Clickable project file badges and proposed shell commands with editable flags.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-Here are Options 1 and 2 from agy. Option 1 is closing the two-way action loop so clicking a Button on an A2uiSurface sends an ActionMessage and the current surface data model back to the Antigravity agent, letting the agent update the surface in-place. Option 2 is extending CatalogImplementation with custom developer widgets like a CodeDiffCard, WorkspaceFileCard, or CommandRunnerCard with editable flags.
+Here are Options 1 and 2 from agy. Option 1 closes the two-way action loop so clicking a button on an A2UI surface sends the action and current form state back to the agent, letting the agent update the surface in place. Option 2 extends the widget catalogue with custom developer components like a Code Diff card, Workspace File card, or Command Runner card with editable flags.
 -->
 
 ---
@@ -481,24 +366,23 @@ layout: default
 
 <ol start="3" class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
   <li v-click>
-    <strong class="text-white text-base">Option 3: Persistent Split-Pane "Surface Canvas" Drawer (Alongside Inline Chat Surfaces)</strong>
+    <strong class="text-white text-base">Option 3: Persistent Split-Pane "Surface Canvas"</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li><code class="text-cyan-300">RendererState</code> supports two UX modes over the same <code class="text-cyan-300">MessageProcessor</code>: inline chat turns and a persistent canvas where multi-turn prompts iteratively evolve a single surface.</li>
-      <li>Add a toggleable right-hand <strong>A2UI Inspector / Canvas</strong> pane in <code class="text-gray-200">ChatScreen</code> and <code class="text-gray-200">TopToolbar</code>.</li>
-      <li>Pin any active surface from <code class="text-gray-200">renderer.model.allSurfaces</code> with a live <strong>Data Model JSON Inspector</strong> (<code class="text-gray-200">surface.dataModel</code>) and <strong>Component Tree Viewer</strong> to watch <code class="text-emerald-300">@path</code> bindings mutate in real time.</li>
+      <li>Pin any active surface into a side-by-side canvas drawer where multi-turn prompts iteratively evolve a single UI.</li>
+      <li>Includes a live data model and component tree inspector to watch state bindings update in real time.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-base">Option 4: Self-Healing Validation Loop (Automatic LLM Repair on <code class="text-red-300">AnswerErrorPart</code>)</strong>
+    <strong class="text-white text-base">Option 4: Self-Healing Validation Loop</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>When the LLM emits a malformed <code class="text-gray-200">&lt;a2ui-json&gt;</code> block or violates a component schema, <code class="text-emerald-300">StreamedAnswer</code> rolls back that block and <code class="text-gray-200">MessageBubble</code> displays <code class="text-red-300">_InlineA2uiErrorBanner</code>.</li>
-      <li>Add a <strong>Fix Surface</strong> button on <code class="text-red-300">_InlineA2uiErrorBanner</code> (or automatic 1-retry self-repair in <code class="text-gray-200">ChatViewModel</code>) that sends <code class="text-amber-300">ErrorMessage(version: '1.0', error: ...)</code> back to the Antigravity session so the agent repairs the surface automatically.</li>
+      <li>When the LLM emits malformed UI JSON or violates a component schema, the invalid block is automatically rolled back.</li>
+      <li>Sends the validation error back to the agent so it can repair its own surface automatically.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-Options 3 and 4 go even deeper. Option 3 takes advantage of the fact that RendererState supports a persistent split-pane Surface Canvas alongside inline chat bubbles, complete with a live Data Model JSON inspector so you can watch @path signals mutate as you type. Option 4 wires up a self-healing validation loop: whenever StreamedAnswer rolls back an invalid block and emits an AnswerErrorPart, the app sends an A2UI ErrorMessage straight back to the agent so it can repair its own surface.
+Options 3 and 4 go even deeper. Option 3 adds a persistent split-pane Surface Canvas alongside inline chat bubbles, complete with a live data model inspector so you can watch state bindings update as you type. Option 4 wires up a self-healing validation loop: whenever an invalid UI block is rolled back, the app sends the validation error straight back to the agent so it can repair its own surface.
 -->
 
 ---
@@ -512,23 +396,23 @@ layout: default
 
 <ol start="5" class="space-y-5 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
   <li v-click>
-    <strong class="text-white text-base">Option 5: Agent-Driven Clarification Forms ("Ask Question" Surface Pattern)</strong>
+    <strong class="text-white text-base">Option 5: Interactive Clarification &amp; Parameter Forms</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Instead of asking plain-text clarifying questions before writing code or running tools, the agent streams an interactive A2UI v1.0 parameter form (<code class="text-emerald-300">ChoicePicker</code> chips/checkboxes, <code class="text-emerald-300">TextField</code> with validation <code class="text-gray-200">checks</code>, <code class="text-emerald-300">CheckBox</code>, <code class="text-emerald-300">Slider</code>, and a validation-gated <code class="text-cyan-300">Submit</code> <code class="text-gray-200">Button</code>).</li>
-      <li>Submitting the form sends the resolved JSON context + data model straight back to the agent.</li>
+      <li>Instead of asking plain-text clarifying questions, the agent streams an interactive form (choice chips, validated text fields, sliders, and a submit button).</li>
+      <li>Submitting the form sends the structured answers straight back to the agent.</li>
     </ul>
   </li>
   <li v-click>
-    <strong class="text-white text-base">Option 6: A2UI Express Format Toggle &amp; Bidirectional RPCs (<code class="text-amber-300">FunctionImplementation</code>)</strong>
+    <strong class="text-white text-base">Option 6: A2UI Express DSL &amp; Bidirectional RPCs</strong>
     <ul class="list-disc pl-5 mt-1.5 space-y-1 text-gray-300">
-      <li>Switch between <code class="text-gray-200">&lt;a2ui-json&gt;</code> (<code class="text-gray-200">DirectJsonFormatFactory</code>) and the compact token-saving <code class="text-gray-200">&lt;a2ui-express&gt;</code> DSL (<code class="text-gray-200">ExpressFormatFactory</code>) over the exact same <code class="text-emerald-300">StreamedAnswer</code> and <code class="text-cyan-300">MessageProcessor</code> pipeline.</li>
-      <li>Register custom <code class="text-amber-300">FunctionImplementation</code>s (<code class="text-cyan-300">AllowedCallers.rendererOrAgent</code>) so the agent and renderer can invoke functions (<code class="text-amber-300">callRendererFunction</code> / <code class="text-amber-300">callAgentFunction</code>) across the wire.</li>
+      <li>Switch between standard <code class="text-gray-200">&lt;a2ui-json&gt;</code> and the compact, token-saving <code class="text-gray-200">&lt;a2ui-express&gt;</code> DSL.</li>
+      <li>Register bidirectional RPC functions so the agent and Flutter UI can invoke functions across the boundary.</li>
     </ul>
   </li>
 </ol>
 
 <!--
-And here are Options 5 and 6! Option 5 teaches the agent to stream interactive A2UI v1.0 clarifying forms — with ChoicePicker chips, validated TextFields, Sliders, and a validation-gated Submit button — whenever a prompt has multiple valid interpretations. Option 6 introduces custom FunctionImplementations registered with AllowedCallers.rendererOrAgent so the agent can invoke client-side Dart functions via callRendererFunction and receive a structuredRendererFunctionResponseMessage! We loved Options 5 and 6 so much that we asked agy to build both of them right on the spot.
+And here are Options 5 and 6! Option 5 teaches the agent to stream interactive clarifying forms — with choice chips, validated text fields, sliders, and a submit button — whenever a prompt has multiple valid interpretations. Option 6 introduces the compact A2UI Express DSL and bidirectional RPC functions so the agent can invoke client-side Dart functions and receive structured responses. We loved Options 5 and 6 so much that we asked agy to build both of them right on the spot.
 -->
 
 ---
