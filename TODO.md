@@ -10,8 +10,8 @@ Before starting any slide-authoring task, read:
 
 ## Task 1: Split & Stage the 12 `.cast` Clips into `recordings/final/`
 
-- [ ] Create `recordings/final/`.
-- [ ] Split [`agy-genui-codelab.cast`](agy-genui-codelab.cast) into the 11 per-scene `.cast` files defined in the **Cast Clips Breakdown** table in [`PRESENTATION.md`](PRESENTATION.md#L83-L100):
+- [x] Create `recordings/final/`.
+- [x] Split [`agy-genui-codelab.cast`](agy-genui-codelab.cast) into the 11 per-scene `.cast` files defined in the **Cast Clips Breakdown** table in [`PRESENTATION.md`](PRESENTATION.md#L83-L100):
   1. `01-act1-markdown-chat.cast` (`[1]–[8]`, `#0..#6585`)
   2. `02-act2-antigravity-sdk.cast` (`[8]–[14]`, `#6585..#13183`)
   3. `03a-act3-cwd-review.cast` (`[14]–[16]`, `#13183..#15294`)
@@ -24,8 +24,8 @@ Before starting any slide-authoring task, read:
   10. `05a-act5-codebase-audit.cast` (`[38]–[40]`, `#80902..#83628`)
   11. `05b-act5-fixups-and-tag.cast` (`[40]–[44]`, `#83628..#87984`)
   - Ensure each split clip preserves a clean initial terminal state and retains its internal `"m"` chapter markers so `AsciinemaPlayer.vue` can step between stop points (`[` / `]`) and compute adaptive segment speeds.
-- [ ] Copy [`plugins.cast`](plugins.cast) to `recordings/final/01b-act1-plugins.cast`.
-- [ ] **Completion Criterion**: All 12 `.cast` files exist in `recordings/final/` and pass `python3 .agents/skills/asciinema/scripts/mark-cast.py <file> --list`.
+- [x] Copy [`plugins.cast`](plugins.cast) to `recordings/final/01b-act1-plugins.cast`.
+- [x] **Completion Criterion**: All 12 `.cast` files exist in `recordings/final/` and pass `python3 .agents/skills/asciinema/scripts/mark-cast.py <file> --list`.
 
 ---
 
