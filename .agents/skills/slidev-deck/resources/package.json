@@ -15,5 +15,12 @@
     "@slidev/theme-default": "^0.25.0",
     "asciinema-player": "^3.8.0",
     "vue": "^3.5.0"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
+  },
+  "overrides": {
+    "dompurify": "^3.4.17",
+    "image-size": "^2.0.3"
   }
 }
