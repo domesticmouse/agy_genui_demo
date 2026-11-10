@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { onSlideEnter, onSlideLeave, useIsSlideActive, useSlideContext } from '@slidev/client'
 import 'asciinema-player/dist/bundle/asciinema-player.css'
 
 export interface CastSegmentInfo {
@@ -139,6 +140,16 @@ const props = withDefaults(defineProps<AsciinemaPlayerProps>(), {
 })
 
 const containerRef = ref<HTMLDivElement | null>(null)
+const isSlideActive = useIsSlideActive()
+const { $renderContext } = useSlideContext()
+const isInteractiveContext = computed(() => ['slide', 'presenter'].includes($renderContext.value))
+
+function isActiveStagePlayer(): boolean {
+  if (!isSlideActive.value || !isInteractiveContext.value) return false
+  if (!containerRef.value || containerRef.value.getClientRects().length === 0) return false
+  return true
+}
+
 const chapters = ref<CastChapterInfo[]>([])
 const segments = ref<CastSegmentInfo[]>([])
 const activeChapterIdx = ref<number>(-1)
@@ -400,7 +411,7 @@ function applyEndState(reason: 'ended' | 'jumped' = 'jumped') {
 }
 
 async function syncLiveSpeedFromPlayer() {
-  if (!playerInstance || typeof playerInstance.getCurrentTime !== 'function') return
+  if (!isSlideActive.value || !playerInstance || typeof playerInstance.getCurrentTime !== 'function') return
   try {
     const t = await playerInstance.getCurrentTime()
     if (typeof t !== 'number' || Number.isNaN(t)) return
@@ -544,19 +555,23 @@ function stepNextChapter() {
 }
 
 function handleStageKeydown(e: KeyboardEvent) {
+  if (!isActiveStagePlayer()) return
   const targetTag = (e.target as HTMLElement | null)?.tagName
   if (targetTag && ['INPUT', 'SELECT', 'TEXTAREA'].includes(targetTag)) return
   if (e.key === '[') {
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
     stepPrevChapter()
   } else if (e.key === ']') {
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
     stepNextChapter()
   } else if (e.key === 'p' || e.key === 'P') {
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
     togglePlay()
   }
 }
@@ -592,7 +607,7 @@ async function initPlayer() {
     const playerOptions: Record<string, any> = {
       cols: props.cols,
       rows: props.rows,
-      autoPlay: props.autoPlay,
+      autoPlay: props.autoPlay && isActiveStagePlayer(),
       preload: props.preload,
       loop: props.loop,
       speed: 1,
@@ -709,6 +724,23 @@ function teardownPlayer() {
     containerRef.value.innerHTML = ''
   }
 }
+
+onSlideEnter(() => {
+  nextTick(() => {
+    if (playerInstance && typeof playerInstance.render === 'function') {
+      playerInstance.render()
+    }
+    if (props.autoPlay && isInteractiveContext.value && playerInstance && !isPlaying.value) {
+      playerInstance.play()
+    }
+  })
+})
+
+onSlideLeave(() => {
+  if (isPlaying.value && playerInstance && typeof playerInstance.pause === 'function') {
+    playerInstance.pause()
+  }
+})
 
 onMounted(() => {
   window.addEventListener('keydown', handleStageKeydown, true)
