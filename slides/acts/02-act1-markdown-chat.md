@@ -175,6 +175,7 @@ cast: /casts/01b-act1-plugins.cast
 autoPlay: false
 speed: 2.0
 idleTimeLimit: 2.0
+startChapter: 2
 fit: both
 ---
 

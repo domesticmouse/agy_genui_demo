@@ -13,6 +13,8 @@ import AsciinemaPlayer from '../components/AsciinemaPlayer.vue'
         :autoPlay="$frontmatter.autoPlay ?? false"
         :speed="$frontmatter.speed ?? 2.0"
         :maxSegmentDuration="$frontmatter.maxSegmentDuration ?? 30.0"
+        :startAt="$frontmatter.startAt ?? 0"
+        :startChapter="$frontmatter.startChapter"
         :idleTimeLimit="$frontmatter.idleTimeLimit ?? 2.0"
         :fit="$frontmatter.fit ?? 'both'"
         :theme="$frontmatter.theme ?? 'dracula'"

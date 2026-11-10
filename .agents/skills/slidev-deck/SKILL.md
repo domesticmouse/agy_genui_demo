@@ -115,7 +115,7 @@ Follow the slide design conventions below. For copy-pasteable HTML/Markdown temp
 #### Choosing a Slide Layout:
 - **`layout: center` (`class: text-center`)**: Title slide, Act divider slides, and big-quote callouts.
 - **`layout: default`**: Concept lists, 2-column anti-pattern vs. solution cards (`bg-red-950/15` vs. `bg-emerald-950/15`), and code/architecture tables.
-- **`layout: cast-full`**: Full-viewport interactive `asciinema-player` slide (`title`, `cast: /casts/file.cast`, `autoPlay: false`, `speed: 2.0`, `idleTimeLimit: 2.0`, `fit: both`, and optional `showChapterBar: true` during development).
+- **`layout: cast-full`**: Full-viewport interactive `asciinema-player` slide (`title`, `cast: /casts/file.cast`, `autoPlay: false`, `speed: 2.0`, `idleTimeLimit: 2.0`, `fit: both`, optional 1-based `startChapter: N` to position the initial playhead at stop point `N`, and optional `showChapterBar: true` during development).
 - **`layout: skill-breakdown`**: Framed zoom-in card (`way: 1|2|3|mashup`, `title`).
 - **`layout: hardware-callout`**: 12-column split pairing a framed image and optional caption overlay on the left (`title`, `image: /images/file.png`, `imageCaption`) with explanatory HTML content in the default slot on the right.
 
