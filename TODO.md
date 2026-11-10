@@ -80,7 +80,7 @@ Before starting any slide-authoring task, read:
 
 ## Task 5: Author Act 4 Slides (`05-act4-a2ui.md`)
 
-- [ ] Author `slides/acts/05-act4-a2ui.md` (`S21`–`S41`) per [`PRESENTATION.md`](PRESENTATION.md#L284-L453):
+- [x] Author `slides/acts/05-act4-a2ui.md` (`S21`–`S41`) per [`PRESENTATION.md`](PRESENTATION.md#L284-L453):
   - `S22` (`Prompt 4.1`), `S23` (`/casts/04a-act4-a2ui-surfaces.cast`), and `S24` (the 3 subtle A2UI v1.0 bugs diagnosed via widget tests, revealed with `v-click`).
   - **7-Slide Package Seamlines Deep Dive (`S25`–`S33`)**:
     - `S25` (`Prompt 4.2`) and `S26` (`/casts/04b-act4-a2ui-seamlines.cast`).
@@ -93,7 +93,7 @@ Before starting any slide-authoring task, read:
     - `S34` (`Prompt 4.3`), `S35` (`/casts/04c-act4-a2ui-options.cast`), and `S36`–`S38` covering all 6 options proposed by `agy`.
   - **Implementing Forms & RPCs (`S39a`–`S41`)**:
     - `S39a` (`Prompt 4.4`), `S39b` (`Prompt 4.5`), `S40` (`/casts/04d-act4-forms-and-rpcs.cast`), and `S41` (`layout: hardware-callout`, `image: /images/step-04-a2ui.png`, including the cliffhanger into Act 5).
-- [ ] **Completion Criterion**: All Mermaid diagrams (`S27`, `S31`, `S32`), `v-click` lists, and cast players in `slides/acts/05-act4-a2ui.md` compile cleanly via `npm --prefix slides run build`.
+- [x] **Completion Criterion**: All Mermaid diagrams (`S27`, `S31`, `S32`), `v-click` lists, and cast players in `slides/acts/05-act4-a2ui.md` compile cleanly via `npm --prefix slides run build`.
 
 ---
 
