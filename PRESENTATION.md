@@ -18,11 +18,12 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
 
 ---
 
-## Cast Clips Breakdown (Split from `agy-genui-codelab.cast`)
+## Cast Clips Breakdown (Split from `agy-genui-codelab.cast` + `plugins.cast`)
 
 | Clip File (`recordings/final/`) | Act / Prompt | Source Markers | Event Range | Warped Duration | Ends With |
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | `01-act1-markdown-chat.cast` | Setup + Prompt 1.1 & 1.2 | `[1]–[8]` | `#0..#6585` | ~58.6s | `git tag step-01-markdown-chat` + `/clear` |
+| `01b-act1-plugins.cast` (`plugins.cast`) | `/plugin` (How `agy` Knew Flutter Skills) | `[1]–[6]` | `#0..#51` | ~8.5s | Expanded `flutter` plugin details (25 Skills, Agents, Rules, MCP) |
 | `02-act2-antigravity-sdk.cast` | Prompt 2.1 & 2.2 | `[8]–[14]` | `#6585..#13183` | ~45.7s | `git tag step-02-antigravity-sdk` + `/clear` |
 | `03a-act3-cwd-review.cast` | Prompt 3.1 (CWD Review) | `[14]–[16]` | `#13183..#15294` | ~26.6s | Investigation report on `Directory.current` vs `/` |
 | `03b-act3-projects-sandbox.cast` | Prompt 3.2 (Projects & Sandbox UI + Q1) | `[16]–[21]` | `#15294..#26607` | ~87.7s | Projects & Sandbox UI built (queued 3.3 at `[18]`) |
@@ -86,6 +87,19 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
     - `agy` consults the Flutter architecture, widget test, and static analysis skills first.
     - Builds clean Domain / Data / Presentation layers (`ChatMessage`, `ChatThread`, `ChatRepository`, `ChatViewModel`).
     - When running `flutter test`, `agy` catches a horizontal `RenderFlex` overflow on an 800px test viewport in `MessageBubble` and self-corrects before committing `step-01-markdown-chat`.
+- **`S06a` — Lead-in: Wait — How Did `agy` Know Those Flutter Skills? (`/plugin`)** (`layout: skill-breakdown`, `way: 2`)
+  - Revealed step-by-step with `v-click`:
+    1. `[v-click 1]` Slash command: `/plugin`
+    2. `[v-click 2]` Inspect **Discover (74)** marketplace & **Installed (5)** plugins (`flutter`, `firebase`, `egm`, `modern-web-guidance-plugin`, `chrome-devtools-plugin`).
+- **`S06b` — Cast Clip 1b: Inspecting the Official Flutter Plugin (`/plugin`)** (`layout: cast-full`)
+  - `cast: /casts/01b-act1-plugins.cast` *(from `plugins.cast`)*
+  - **Talking Points During Playback**:
+    - Typing `/plugin` opens the interactive plugin manager: **Installed (5)** vs. **Discover (74)** across Google Workspace, Build with Google, and partner shelves.
+    - Expanding the **`flutter` plugin** reveals everything bundled as a single toggleable unit:
+      - **25 Dart & Flutter Skills** (`flutter-apply-architecture-best-practices`, `flutter-add-widget-test`, `dart-run-static-analysis`, `flutter-fix-layout-issues`, etc.)
+      - **Custom Subagent**: `flutter_a11y_agent`
+      - **Rules**: `flutter-hot-reload.md`, `flutter-hot-reload.mdc`
+      - **MCP Server**: `dart-mcp-server`
 - **`S07` — Screenshot & Live Demo: `step-01-markdown-chat`** (`layout: hardware-callout`)
   - `image: /images/step-01-markdown-chat.png`
   - **Live Demo Transition**:
