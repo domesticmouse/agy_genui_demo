@@ -13,7 +13,7 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
 - **Slide vs. `v-click` Rule**:
   - Distinct commands or prompts (e.g., **Shell Setup** vs. **Prompt 1.1** vs. **Tag & `/clear`**) each get their own **separate slide**.
   - Inside a slide that has multiple commands, numbered prompt items, or multiple sentences, each line/sentence is revealed step-by-step using Slidev **`v-click`** animations.
-- In **Act 4**, we dedicate **7 slides** after Clip 4.2 to unpack the architecture and 4 seamlines between `a2ui_core`, `a2ui_agent`, and `a2ui_flutter`, and **3 slides** after Clip 4.3 to walk through the 6 A2UI capability options `agy` proposed for the codebase.
+- In **Act 4**, we dedicate **4 slides** after Clip 4.2 to unpack the architecture and 4 seamlines between `a2ui_core`, `a2ui_agent`, and `a2ui_flutter`, and **2 slides** after Clip 4.3 to walk through the 6 A2UI capability options `agy` proposed for the codebase.
 - At the end of each of the 5 Acts (where we create a Git tag), we show a **Screenshot & Live Demo Slide** (`layout: hardware-callout`) with the hot-restart checkout command to transition smoothly into the live macOS app.
 - **Deck Rendering Libraries, LaTeX Guardrails & GitHub Hosting**:
   - Use Slidev's built-in **Shiki** (`highlighter: shiki`) for syntax highlighting, **KaTeX** for any standalone math, and **MermaidJS** for architecture, dependency, and sequence diagrams (`S03`, `S27`, `S31`, `S32`).
@@ -389,7 +389,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     3. `[v-click 3]` **Dart Backend Agent Server / CLI (`shelf`, `dart_frog`, CLI)** — `a2ui_core` + `a2ui_agent` (No `a2ui_flutter`): Pure Dart server cannot depend on `flutter`; uses `BasicCatalog.v1_0()` + `A2uiRequestProcessor` + `RendererState` to prompt the LLM, heal/validate `<a2ui-json>`, and forward messages to clients.
     4. `[v-click 4]` **Custom Non-Flutter Dart Renderer / Headless Testing** — `a2ui_core` (+ optional `a2ui_agent`): Subclass `ComponentApi` and mount `NodeResolver<MyComponent>` to target Jaspr, terminal UI, or headless unit tests.
 
-#### Deep Dive Part B: Options `agy` Suggested for Utilising A2UI (3 Slides After Clip 4.3)
+#### Deep Dive Part B: Options `agy` Suggested for Utilising A2UI (2 Slides After Clip 4.3)
 
 - **`S34` — Lead-in: Prompt 4.3 (Explore Capabilities for This Codebase)** (`layout: skill-breakdown`, `way: 3`)
   - **Prompt 4.3**:
@@ -398,7 +398,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     ```
 - **`S35` — Cast Clip 4.3: Brainstorming 6 A2UI Enhancements** (`layout: cast-full`)
   - `cast: /casts/04c-act4-a2ui-options.cast`
-- **`S36` — `agy`'s Suggestions (1 of 3): Action Loops & Custom Developer Catalogue** (`layout: default`)
+- **`S36` — `agy`'s Suggestions (1 of 2): Action Loops, Developer Widgets & Canvas** (`layout: default`)
   - Revealed with `v-click`:
     - `[v-click 1]` **Option 1: Live Two-Way Action Loop (`Button` → Agent Turn + `a2uiRendererDataModel` Sync)**
       - Automatically dispatch `ActionMessage` + `a2uiRendererDataModel` to the thread's Antigravity `Agent` when a user clicks an `A2uiSurface` `Button`.
@@ -409,21 +409,19 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
         - `CodeDiffCard`: Side-by-side or unified diff preview with **Apply Patch** / **Discard** action buttons.
         - `FileTreeCard` / `WorkspaceFileCard`: Clickable file badges (`path`, `lineStart`, `lineEnd`, `summary`) for files in `ChatProject.workingDirectory`.
         - `CommandRunnerCard`: Proposes a shell command with editable flags (`TextField` / `CheckBox` bound to data model) and a **Run in Workspace** button.
-- **`S37` — `agy`'s Suggestions (2 of 3): Persistent Canvas & Self-Healing Validation** (`layout: default`)
-  - Revealed with `v-click`:
-    - `[v-click 1]` **Option 3: Persistent Split-Pane "Surface Canvas" Drawer (Alongside Inline Chat Surfaces)**
+    - `[v-click 3]` **Option 3: Persistent Split-Pane "Surface Canvas" Drawer (Alongside Inline Chat Surfaces)**
       - `RendererState` supports two UX modes over the same `MessageProcessor`: inline chat turns and a persistent canvas where multi-turn prompts iteratively evolve a single surface.
       - Add a toggleable right-hand **A2UI Inspector / Canvas** pane in `ChatScreen` and `TopToolbar`.
       - Pin any active surface from `renderer.model.allSurfaces` with a live **Data Model JSON Inspector** (`surface.dataModel`) and **Component Tree Viewer** to watch `@path` bindings mutate in real time.
-    - `[v-click 2]` **Option 4: Self-Healing Validation Loop (Automatic LLM Repair on `AnswerErrorPart`)**
+- **`S37` — `agy`'s Suggestions (2 of 2): Self-Healing, Clarification Forms & RPCs** (`layout: default`)
+  - Revealed with `v-click`:
+    - `[v-click 1]` **Option 4: Self-Healing Validation Loop (Automatic LLM Repair on `AnswerErrorPart`)**
       - When the LLM emits a malformed `<a2ui-json>` block or violates a component schema, `StreamedAnswer` rolls back that block and `MessageBubble` displays `_InlineA2uiErrorBanner`.
       - Add a **Fix Surface** button on `_InlineA2uiErrorBanner` (or an automatic 1-retry self-repair option in `ChatViewModel`) that sends `ErrorMessage(version: '1.0', error: ...)` back to the thread's Antigravity session so the agent repairs the surface automatically.
-- **`S38` — `agy`'s Suggestions (3 of 3): Clarification Forms, Express DSL & Bidirectional RPCs** (`layout: default`)
-  - Revealed with `v-click`:
-    - `[v-click 1]` **Option 5: Agent-Driven Clarification Forms ("Ask Question" Surface Pattern)**
+    - `[v-click 2]` **Option 5: Agent-Driven Clarification Forms ("Ask Question" Surface Pattern)** *(Selected for Act 4.4)*
       - Instead of asking plain-text clarifying questions before writing code or running tools, the agent streams an interactive A2UI v1.0 parameter form (`ChoicePicker` chips/checkboxes, `TextField` with validation `checks`, `CheckBox`, `Slider`, and a validation-gated `Submit` `Button`).
       - Submitting the form sends the resolved JSON context + data model straight back to the agent.
-    - `[v-click 2]` **Option 6: A2UI Express Format Toggle (`DirectJsonFormatFactory` vs. `ExpressFormatFactory`) & Bidirectional RPCs (`FunctionImplementation`)**
+    - `[v-click 3]` **Option 6: A2UI Express Format Toggle (`DirectJsonFormatFactory` vs. `ExpressFormatFactory`) & Bidirectional RPCs (`FunctionImplementation`)** *(Selected for Act 4.4)*
       - Switch between `<a2ui-json>` (`DirectJsonFormatFactory`) and the compact token-saving `<a2ui-express>` DSL (`ExpressFormatFactory`) over the exact same `StreamedAnswer` and `MessageProcessor` pipeline.
       - Register custom `FunctionImplementation`s (`AllowedCallers.rendererOrAgent`) so the agent and renderer can invoke functions (`callRendererFunction` / `callAgentFunction`) across the wire.
 
