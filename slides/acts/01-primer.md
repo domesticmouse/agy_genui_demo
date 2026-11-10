@@ -95,54 +95,46 @@ layout: default
 
 <!-- S03 -->
 <div class="flex items-center gap-3 mb-4">
-  <h2 class="text-2xl font-bold m-0">How We Built This: 5 Acts, <code class="text-cyan-300">/clear</code>, and Git Tags</h2>
+  <h2 class="text-2xl font-bold m-0">How We Built This</h2>
 </div>
 
-<p class="text-xs text-gray-300 leading-relaxed mb-3">
-  Each milestone resets context with <code class="text-amber-300">/clear</code>, verifies <code class="text-cyan-300">dart analyze</code> and <code class="text-cyan-300">flutter test</code>, and ends with a Git tag we can hot-restart into in under a second:
+<p class="text-sm text-gray-300 leading-relaxed mb-5">
+  Five incremental milestones &mdash; each verified with static analysis and widget tests, tagged in Git for instant hot-restart, and followed by <code class="text-amber-300">/clear</code> to reset the context window:
 </p>
 
-<ol class="space-y-1.5 text-xs text-gray-200 list-decimal pl-6 mb-4 leading-relaxed">
-  <li>
-    <code class="text-cyan-300 font-semibold">step-00-scaffold</code> &rarr; <code class="text-cyan-300 font-semibold">step-01-markdown-chat</code> &mdash;
-    <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Session 01 Transcript</a>
-    <span class="text-gray-400">(macOS Markdown Chat UI with <code class="text-gray-300">flutter_markdown_plus</code>)</span>
+<ol class="space-y-4 text-sm text-gray-200 list-decimal pl-6 leading-relaxed">
+  <li v-click>
+    <strong class="text-white text-base">macOS Desktop Markdown Chat UI</strong>
+    <div class="text-gray-300 mt-0.5">
+      Scaffold a native desktop chat interface with conversation threads, live preview, and GitHub-Flavored Markdown.
+    </div>
   </li>
-  <li>
-    <code class="text-amber-300 font-semibold">step-02-antigravity-sdk</code> &mdash;
-    <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Session 02 Transcript</a>
-    <span class="text-gray-400">(Live <code class="text-gray-300">package:antigravity</code> backend &amp; macOS entitlements)</span>
+  <li v-click>
+    <strong class="text-white text-base">Live Antigravity SDK Backend</strong>
+    <div class="text-gray-300 mt-0.5">
+      Replace the simulated reply loop with a live agent backend and configure macOS sandbox entitlements.
+    </div>
   </li>
-  <li>
-    <code class="text-emerald-300 font-semibold">step-03-projects-sandbox</code> &mdash;
-    <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Session 03 Transcript</a>
-    <span class="text-gray-400">(Project workspaces, <code class="text-gray-300">exebox</code> sandbox review UI &amp; compaction #1)</span>
+  <li v-click>
+    <strong class="text-white text-base">Project Workspaces &amp; Sandbox Review UI</strong>
+    <div class="text-gray-300 mt-0.5">
+      Ground conversations in local project folders and add an interactive approval flow for out-of-sandbox commands.
+    </div>
   </li>
-  <li>
-    <code class="text-purple-300 font-semibold">step-04-a2ui</code> &mdash;
-    <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Session 04 Transcript</a>
-    <span class="text-gray-400">(A2UI v1.0 streaming surfaces, package seamlines, forms &amp; RPCs)</span>
+  <li v-click>
+    <strong class="text-white text-base">A2UI v1.0 Streaming Surfaces &amp; Two-Way RPCs</strong>
+    <div class="text-gray-300 mt-0.5">
+      Stream interactive UI cards, forms, and client-side function calls inline alongside standard Markdown.
+    </div>
   </li>
-  <li>
-    <code class="text-pink-300 font-semibold">step-05-fixup</code> &mdash;
-    <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/05-7407df5f-please-review-this-codebase.md" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Session 05 Transcript</a>
-    <span class="text-gray-400">(Fresh-context codebase audit &amp; end-to-end RPC loop fix)</span>
+  <li v-click>
+    <strong class="text-white text-base">Fresh-Context Codebase Audit &amp; Fixups</strong>
+    <div class="text-gray-300 mt-0.5">
+      Audit the full codebase in a clean session to uncover and fix five real end-to-end integration bugs.
+    </div>
   </li>
 </ol>
 
-<div class="p-3 rounded-xl bg-gray-900/70 border border-gray-800">
-
-```mermaid
-flowchart LR
-  T0["step-00-scaffold"] -->|"Act 1"| T1["step-01-markdown-chat"]
-  T1 -->|"/clear + Act 2"| T2["step-02-antigravity-sdk"]
-  T2 -->|"/clear + Act 3 (Compacted!)"| T3["step-03-projects-sandbox"]
-  T3 -->|"/clear + Act 4 (Compacted!)"| T4["step-04-a2ui"]
-  T4 -->|"/clear + Act 5"| T5["step-05-fixup"]
-```
-
-</div>
-
 <!--
-My plan was simple: structure the build into five acts, tag each milestone in Git so we can hot-restart between them in under a second, and run /clear at the end of every act to keep the context window lean and avoid context bloat. Spoiler alert: despite my best intentions, I still got carried away stacking follow-up prompts inside Acts 3 and 4 and got hit by automatic context compaction later in the show!
+My plan was simple: build the application across five incremental steps, verify each step with static analysis and widget tests, tag each milestone in Git so we can hot-restart between them in under a second, and run /clear at the end of every act to keep the context window lean. First, we scaffold a macOS desktop Markdown chat UI. Second, we wire up the live Antigravity SDK backend and macOS entitlements. Third, we add local project workspaces and an interactive sandbox approval UI. Fourth, we stream interactive A2UI v1.0 surfaces, forms, and two-way RPCs inline with Markdown. And fifth, we start a fresh session to audit our own codebase and fix five real integration bugs.
 -->
