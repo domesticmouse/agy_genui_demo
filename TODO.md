@@ -99,13 +99,13 @@ Before starting any slide-authoring task, read:
 
 ## Task 6: Author Act 5 & Finale Slides (`06-act5-fixup.md`) & Audit Compiled Deck
 
-- [ ] Author `slides/acts/06-act5-fixup.md` (`S42`–`S49`) per [`PRESENTATION.md`](PRESENTATION.md#L455-L515):
+- [x] Author `slides/acts/06-act5-fixup.md` (`S42`–`S49`) per [`PRESENTATION.md`](PRESENTATION.md#L455-L515):
   - `S43` (`Prompt 5.1`), `S44` (`/casts/05a-act5-codebase-audit.cast`), and `S45` (the 5 issues surfaced by the fresh-context audit, revealed with `v-click`).
   - `S46a` (`Prompt 5.2`), `S46b` (`Prompt 5.3`), `S47` (`/casts/05b-act5-fixups-and-tag.cast`), and `S48` (`layout: hardware-callout`, `image: /images/step-05-fixup.png`).
   - `S49` (**Takeaways, Resources & Thank You**):
     - Pair the 4 core takeaways and clickable resource cards on the left with the **Deck QR Code** (`/images/deck-qr.svg` → `https://domesticmouse.github.io/agy_genui_demo/`) on the right.
     - Include clickable links to the live deck, GitHub repo (`github.com/domesticmouse/agy_genui_demo`), `CODELAB.md`, `PRESENTATION.md`, `prompts/README.md` (sessions 01–07), `agy-genui-codelab-cast-player.html`, and the `pub.dev` packages (`antigravity`, `a2ui_core`, `a2ui_agent`, `a2ui_flutter`, `flutter_markdown_plus`).
-- [ ] Run `npm --prefix slides run build` and audit `slides/dist/` to verify:
+- [x] Run `npm --prefix slides run build` and audit `slides/dist/` to verify:
   - Zero raw LaTeX escapes (`\rightarrow`, `\leftrightarrow`, or unescaped `$`) appear in the rendered output.
   - All `/casts/*` and `/images/*` assets exist in `slides/public/` and `slides/dist/`.
   - Local dev server (`.agents/skills/slidev-deck/scripts/slides-server.sh start`) serves the deck with `HTTP 200`.
@@ -114,7 +114,7 @@ Before starting any slide-authoring task, read:
 
 ## Task 7: Tidy Up `README.md`
 
-- [ ] Refactor [`README.md`](README.md) to remove bloated implementation prose and make it a crisp, scannable entry point for the repository:
+- [x] Refactor [`README.md`](README.md) to remove bloated implementation prose and make it a crisp, scannable entry point for the repository:
   - **Overview & Links Banner**: Brief 2–3 sentence summary linking to the **Live Slidev Presentation Deck** (`https://domesticmouse.github.io/agy_genui_demo/`), **Step-by-Step Codelab** ([`CODELAB.md`](CODELAB.md)), **Presentation Outline** ([`PRESENTATION.md`](PRESENTATION.md)), **Interactive Terminal Recording** ([`agy-genui-codelab-cast-player.html`](https://domesticmouse.github.io/agy_genui_demo/agy-genui-codelab-cast-player.html)), and **Exported `agy` Session Transcripts** ([`prompts/README.md`](prompts/README.md)).
   - **5-Act Git Tag Milestones Table**: Compact table showing `step-00-scaffold` through `step-05-fixup`, what each tag adds, and the one-line `git checkout <tag> -- lib test` hot-restart command for live demos.
   - **Key Packages**: Concise list with links to [`antigravity`](https://pub.dev/packages/antigravity), [`a2ui_core`](https://pub.dev/packages/a2ui_core), [`a2ui_agent`](https://pub.dev/packages/a2ui_agent), [`a2ui_flutter`](https://pub.dev/packages/a2ui_flutter), and [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus).
