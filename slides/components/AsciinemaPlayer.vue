@@ -70,6 +70,10 @@ export interface AsciinemaPlayerProps {
    */
   startAt?: number | string
   /**
+   * 1-based stop point / chapter marker number to position the playhead at on load (e.g. 2 for the second stop point)
+   */
+  startChapter?: number
+  /**
    * Maximum idle time between terminal events in seconds
    */
   idleTimeLimit?: number
@@ -126,6 +130,7 @@ const props = withDefaults(defineProps<AsciinemaPlayerProps>(), {
   speed: 2.0,
   maxSegmentDuration: 30.0,
   startAt: 0,
+  startChapter: undefined,
   idleTimeLimit: 2.0,
   theme: 'dracula',
   fit: 'both',
@@ -631,10 +636,6 @@ async function initPlayer() {
     playerInstance = AsciinemaPlayer.create({ data: v2Text }, containerRef.value, playerOptions)
     lastPolledTime = 0
 
-    speedPollTimer = setInterval(() => {
-      syncLiveSpeedFromPlayer()
-    }, 100)
-
     playerInstance.addEventListener('play', () => {
       isPlaying.value = true
       if (activeChapterIdx.value >= chapters.value.length) {
@@ -700,6 +701,20 @@ async function initPlayer() {
       })
       resizeObserver.observe(containerRef.value)
     }
+
+    const initialChapterIdx =
+      typeof props.startChapter === 'number' && Number.isFinite(props.startChapter)
+        ? Math.floor(props.startChapter) - 1
+        : -1
+    if (initialChapterIdx >= 0 && initialChapterIdx < foundChapters.length) {
+      await jumpToChapter(initialChapterIdx)
+    }
+
+    if (playerInstance) {
+      speedPollTimer = setInterval(() => {
+        syncLiveSpeedFromPlayer()
+      }, 100)
+    }
   } catch (err) {
     console.error('[AsciinemaPlayer] Failed to instantiate asciinema-player:', err)
   }
@@ -755,7 +770,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => [props.src, props.theme, props.fit, props.speed, props.maxSegmentDuration, props.idleTimeLimit],
+  () => [props.src, props.theme, props.fit, props.speed, props.maxSegmentDuration, props.idleTimeLimit, props.startAt, props.startChapter],
   () => {
     initPlayer()
   }
