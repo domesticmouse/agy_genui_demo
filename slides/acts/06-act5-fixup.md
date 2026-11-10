@@ -237,7 +237,6 @@ layout: default
         <li><strong class="text-white">Git tags + Hot Restart = Live-Demo Time Travel:</strong> <code class="text-cyan-300">git checkout &lt;tag&gt; -- lib test</code> jumps between any of the 5 acts in under a second.</li>
       </ul>
     </div>
-
     <div class="p-3 rounded-xl bg-gray-900/90 border border-gray-800 space-y-1.5">
       <div class="text-[11px] font-mono text-cyan-400 uppercase tracking-wider">Repository, Codelab, Cast Player &amp; Packages</div>
       <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-300 leading-snug">
@@ -277,7 +276,6 @@ layout: default
       </div>
     </div>
   </div>
-
   <div class="col-span-4 flex flex-col items-center justify-center p-4 rounded-xl bg-[#0d0e12] border border-cyan-500/40 text-center space-y-2.5 shadow-lg">
     <div class="text-xs font-mono text-cyan-300 uppercase tracking-wider font-semibold">
       Scan for Live Deck &amp; Links
