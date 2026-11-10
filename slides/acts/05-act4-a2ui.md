@@ -145,34 +145,33 @@ layout: default
 ---
 
 <!-- S27 -->
-<div class="flex items-center gap-3 mb-3">
+<div class="flex items-center gap-3 mb-5">
   <h2 class="text-2xl font-bold m-0">Overview (1 of 7): How the 3 A2UI Packages Layer Together</h2>
 </div>
 
-<ul class="space-y-1.5 text-xs text-gray-200 list-disc pl-5 mb-3 leading-relaxed">
-  <li>
-    <strong class="text-cyan-300 font-mono">a2ui_core</strong> <span class="text-gray-400">(Pure Dart foundation):</span> Zero dependency on Flutter or any LLM SDK &mdash; protocol envelopes, catalogue schemas, JSON Pointer data models, and reactive <code class="text-gray-300">preact_signals</code>.
+<ol class="space-y-4 text-sm text-gray-200 list-decimal pl-6 mt-4 leading-relaxed">
+  <li v-click>
+    <strong class="text-cyan-300 font-mono">a2ui_core</strong> <span class="text-gray-400">(Pure Dart foundation)</span>
+    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
+      <li>Zero dependency on Flutter or any LLM SDK.</li>
+      <li>Defines protocol envelopes, catalogue schemas, JSON Pointer data models, and reactive <code class="text-gray-200">preact_signals</code>.</li>
+    </ul>
   </li>
-  <li>
-    <strong class="text-amber-300 font-mono">a2ui_agent</strong> <span class="text-gray-400">(Pure Dart agent bridge):</span> Depends on <code class="text-cyan-300">a2ui_core</code> (and <code class="text-gray-300">antlr4</code>), <strong>never</strong> on <code class="text-gray-300">flutter</code> &mdash; prompt generation, streaming parser, and JSON healing.
+  <li v-click>
+    <strong class="text-amber-300 font-mono">a2ui_agent</strong> <span class="text-gray-400">(Pure Dart agent bridge)</span>
+    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
+      <li>Depends on <code class="text-cyan-300">a2ui_core</code> (and <code class="text-gray-200">antlr4</code>), <strong>never</strong> on <code class="text-gray-200">flutter</code>.</li>
+      <li>Handles system prompt generation, streaming LLM token parsing, and incremental JSON healing.</li>
+    </ul>
   </li>
-  <li>
-    <strong class="text-emerald-300 font-mono">a2ui_flutter</strong> <span class="text-gray-400">(Flutter widget layer):</span> Depends on <code class="text-cyan-300">a2ui_core</code> and <code class="text-gray-300">flutter</code>, <strong>never</strong> on <code class="text-amber-300">a2ui_agent</code> &mdash; concrete widget catalogue and <code class="text-emerald-300">A2uiSurface</code>.
+  <li v-click>
+    <strong class="text-emerald-300 font-mono">a2ui_flutter</strong> <span class="text-gray-400">(Flutter widget layer)</span>
+    <ul class="list-disc pl-5 mt-1 space-y-1 text-gray-300">
+      <li>Depends on <code class="text-cyan-300">a2ui_core</code> and <code class="text-gray-200">flutter</code>, <strong>never</strong> on <code class="text-amber-300">a2ui_agent</code>.</li>
+      <li>Provides the concrete Material 3 widget catalogue and reactive <code class="text-emerald-300">A2uiSurface</code> widget.</li>
+    </ul>
   </li>
-</ul>
-
-<div class="p-3 rounded-xl bg-gray-900/70 border border-gray-800">
-
-```mermaid
-flowchart TD
-  App["agy_genui_demo (Flutter macOS App)"] --> Agent["a2ui_agent (Pure Dart + antlr4)"]
-  App --> Flutter["a2ui_flutter (Flutter Widget Adapter)"]
-  Agent -->|"Imports"| Core["a2ui_core (Pure Dart Protocol, Catalog & Signals)"]
-  Flutter -->|"Imports"| Core
-  Flutter -->|"Imports"| SDK["package:flutter"]
-```
-
-</div>
+</ol>
 
 <!--
 Here is the big-picture dependency graph. At the foundation sits a2ui_core, which is pure Dart with zero dependency on Flutter or any LLM SDK. Above it sit two sibling packages that never import each other: a2ui_agent is pure Dart for server or client LLM orchestration, and a2ui_flutter is the Flutter widget adapter that only knows about a2ui_core and package:flutter.
@@ -295,41 +294,28 @@ title: "Seamlines 1 & 2 (5 of 7): Catalogue Type Erasure & Stream Processing"
 ---
 
 <!-- S31 -->
-<div class="space-y-3 text-xs leading-relaxed">
-  <div class="grid grid-cols-2 gap-3">
-    <div class="p-3 rounded-lg bg-gray-900/80 border border-gray-800 space-y-1">
+<div class="space-y-4 text-sm leading-relaxed my-auto">
+  <div class="grid grid-cols-2 gap-4">
+    <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-cyan-300 font-semibold font-mono">
         Seamline 1: ComponentApi &harr; ComponentImplementation
       </div>
-      <ul class="list-disc pl-4 space-y-0.5 text-gray-300">
+      <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
         <li><code class="text-cyan-300">a2ui_core</code> is generic over <code class="text-gray-200">T extends ComponentApi</code>.</li>
         <li><code class="text-emerald-300">a2ui_flutter</code> provides <code class="text-gray-200">basicCatalog()</code> (<code class="text-gray-200">Catalog&lt;ComponentImplementation, ...&gt;</code>).</li>
         <li><code class="text-amber-300">CatalogConfig.fromCatalog()</code> erases the Flutter widget builder down to <code class="text-gray-200">ComponentApi</code> JSON Schemas so <code class="text-amber-300">a2ui_agent</code> never imports Flutter.</li>
       </ul>
     </div>
-    <div class="p-3 rounded-lg bg-gray-900/80 border border-gray-800 space-y-1">
+    <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-amber-300 font-semibold font-mono">
         Seamline 2: A2uiRequestProcessor &harr; MessageProcessor&lt;T&gt;
       </div>
-      <ul class="list-disc pl-4 space-y-0.5 text-gray-300">
+      <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
         <li><code class="text-amber-300">A2uiRequestProcessor</code> converts raw LLM chunks (<code class="text-gray-200">&lt;a2ui-json&gt;</code>) &rarr; <code class="text-gray-200">List&lt;AgentToRendererMessage&gt;</code>.</li>
         <li><code class="text-cyan-300">MessageProcessor&lt;T&gt;</code> consumes envelopes &rarr; mutates <code class="text-gray-200">SurfaceModel&lt;T&gt;</code>.</li>
         <li>Can run across a network wire or fused in-process via <code class="text-cyan-300">RendererState.of(renderer)</code> and <code class="text-emerald-300">StreamedAnswer</code>.</li>
       </ul>
     </div>
-  </div>
-
-  <div class="p-2.5 rounded-xl bg-gray-900/70 border border-gray-800">
-
-```mermaid
-flowchart LR
-  LLM["LLM Stream (Markdown + a2ui-json)"] --> ReqProc["A2uiRequestProcessor (a2ui_agent)"]
-  ReqProc -->|"TextPart"| Prose["AnswerTextPart (Markdown)"]
-  ReqProc -->|"AgentToRendererMessage[]"| MsgProc["MessageProcessor (a2ui_core)"]
-  MsgProc -->|"Mutates"| SurfModel["SurfaceModel (a2ui_core)"]
-  SurfModel -->|"Mounts"| Widget["A2uiSurface (a2ui_flutter)"]
-```
-
   </div>
 </div>
 
@@ -344,44 +330,27 @@ title: "Seamlines 3 & 4 (6 of 7): Reactive Surface Mounting & Two-Way Actions"
 ---
 
 <!-- S32 -->
-<div class="space-y-2.5 text-xs leading-relaxed">
-  <div class="grid grid-cols-2 gap-3">
-    <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 space-y-1">
+<div class="space-y-4 text-sm leading-relaxed my-auto">
+  <div class="grid grid-cols-2 gap-4">
+    <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-emerald-300 font-semibold font-mono">
         Seamline 3: SurfaceModel &harr; A2uiSurface
       </div>
-      <p class="text-gray-300 m-0">
-        <code class="text-cyan-300">AnswerSurfacePart.surface</code> yields a <code class="text-gray-200">SurfaceModel&lt;ComponentImplementation&gt;</code> passed directly to <code class="text-emerald-300">A2uiSurface(key: ObjectKey(surface), surface: surface)</code>, wrapped in <code class="text-gray-200">A2uiMarkdown</code> for rich text.
-      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
+        <li><code class="text-cyan-300">AnswerSurfacePart.surface</code> yields a <code class="text-gray-200">SurfaceModel&lt;ComponentImplementation&gt;</code>.</li>
+        <li>Passed directly to <code class="text-emerald-300">A2uiSurface(key: ObjectKey(surface), surface: surface)</code>.</li>
+        <li>Wrapped in <code class="text-gray-200">A2uiMarkdown</code> for rich text rendering inside components.</li>
+      </ul>
     </div>
-    <div class="p-2.5 rounded-lg bg-gray-900/80 border border-gray-800 space-y-1">
+    <div class="p-4 rounded-lg bg-gray-900/80 border border-gray-800 space-y-2">
       <div class="text-amber-300 font-semibold font-mono">
         Seamline 4: WritableBinding vs. ActionMessage
       </div>
-      <p class="text-gray-300 m-0">
-        Editing <code class="text-gray-200">@path</code> inputs mutates <code class="text-cyan-300">SurfaceModel.dataModel</code> locally via <code class="text-gray-200">WritableBinding</code>; clicking a <code class="text-gray-200">Button</code> emits <code class="text-amber-300">ActionMessage</code> + <code class="text-gray-200">getRendererDataModel</code> (plus <code class="text-gray-200">outboundListener</code> for RPCs).
-      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-gray-300">
+        <li>Editing <code class="text-gray-200">@path</code> inputs mutates <code class="text-cyan-300">SurfaceModel.dataModel</code> locally via <code class="text-gray-200">WritableBinding</code> with zero network round-trips.</li>
+        <li>Clicking a <code class="text-gray-200">Button</code> resolves <code class="text-gray-200">action.event.context</code> and emits <code class="text-amber-300">ActionMessage</code> + <code class="text-gray-200">getRendererDataModel</code> (plus <code class="text-gray-200">outboundListener</code> for RPCs).</li>
+      </ul>
     </div>
-  </div>
-
-  <div class="p-2 rounded-xl bg-gray-900/70 border border-gray-800">
-
-```mermaid
-sequenceDiagram
-  actor User
-  participant UI as "A2uiSurface (a2ui_flutter)"
-  participant Model as "SurfaceModel.dataModel (a2ui_core)"
-  participant Agent as "Antigravity Agent (localharness)"
-  User->>UI: Edit TextField / Slider (@path)
-  UI->>Model: WritableBinding mutates signal in-place
-  Model-->>UI: SignalState rebuilds bound widgets
-  User->>UI: Click Submit Button (NodeAction)
-  UI->>Model: Resolve action.event.context + getRendererDataModel
-  Model->>Agent: ActionMessage + a2uiRendererDataModel
-  Agent-->>Model: Stream UpdateDataModel / UpdateComponents
-  Model-->>UI: Reactive subtree update
-```
-
   </div>
 </div>
 
