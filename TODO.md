@@ -69,12 +69,12 @@ Before starting any slide-authoring task, read:
 
 ## Task 4: Author Act 3 Slides (`04-act3-projects-sandbox.md`)
 
-- [ ] Author `slides/acts/04-act3-projects-sandbox.md` (`S12`, `S13`, `S14`, `S15`, `S16`, `S17`, `S18a`, `S18b`, `S19`, `S20`) per [`PRESENTATION.md`](PRESENTATION.md#L228-L282):
+- [x] Author `slides/acts/04-act3-projects-sandbox.md` (`S12`, `S13`, `S14`, `S15`, `S16`, `S17`, `S18a`, `S18b`, `S19`, `S20`) per [`PRESENTATION.md`](PRESENTATION.md#L228-L282):
   - `S13` (`Prompt 3.1`) and `S14` (`/casts/03a-act3-cwd-review.cast`).
   - `S15`: 2-column red/emerald comparison card contrasting the macOS `.app` Finder `/` root trap (`Directory.current`) against explicit `ChatProject` workspaces, plus the 2 bonus review catches.
   - `S16` (`Prompt 3.2` with `v-click` per numbered item/sentence) and `S17` (`/casts/03b-act3-projects-sandbox.cast` — reverse-engineering `localharness` policies and `workspaceOnly` vs `enableSandbox`).
   - `S18a` (`Prompt 3.3`), `S18b` (`Prompt 3.4`), `S19` (`/casts/03c-act3-review-fixes.cast` — featuring automatic `Conversation compacted`), and `S20` (`layout: hardware-callout`, `image: /images/step-03-projects-sandbox.png`).
-- [ ] **Completion Criterion**: `slides/acts/04-act3-projects-sandbox.md` builds cleanly with `npm --prefix slides run build` with zero raw LaTeX or indented code fence issues.
+- [x] **Completion Criterion**: `slides/acts/04-act3-projects-sandbox.md` builds cleanly with `npm --prefix slides run build` with zero raw LaTeX or indented code fence issues.
 
 ---
 
