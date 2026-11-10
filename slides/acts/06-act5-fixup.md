@@ -239,34 +239,21 @@ layout: default
     </div>
     <div class="p-3 rounded-xl bg-gray-900/90 border border-gray-800 space-y-1.5">
       <div class="text-[11px] font-mono text-cyan-400 uppercase tracking-wider">Repository, Codelab, Cast Player &amp; Packages</div>
-      <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-gray-300 leading-snug">
+      <div class="space-y-1.5 text-gray-300 leading-snug">
         <div>
-          <strong class="text-white">Live Deck:</strong>
-          <a href="https://domesticmouse.github.io/agy_genui_demo/" target="_blank" class="text-cyan-300 underline font-mono">domesticmouse.github.io/agy_genui_demo</a>
+          <strong class="text-white mr-1.5">GitHub Repo:</strong>
+          <a href="https://github.com/domesticmouse/agy_genui_demo" target="_blank" class="text-cyan-300 underline font-mono">github.com/domesticmouse/agy_genui_demo</a>
         </div>
         <div>
-          <strong class="text-white">Cast Player:</strong>
+          <strong class="text-white mr-1.5">Codelab:</strong>
+          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/CODELAB.md" target="_blank" class="text-emerald-300 underline font-mono">CODELAB.md</a>
+        </div>
+        <div>
+          <strong class="text-white mr-1.5">Cast Player:</strong>
           <a href="https://domesticmouse.github.io/agy_genui_demo/agy-genui-codelab-cast-player.html" target="_blank" class="text-cyan-300 underline font-mono">agy-genui-codelab-cast-player.html</a>
         </div>
-        <div class="col-span-2">
-          <strong class="text-white">GitHub &amp; Guides:</strong>
-          <a href="https://github.com/domesticmouse/agy_genui_demo" target="_blank" class="text-cyan-300 underline font-mono">github.com/domesticmouse/agy_genui_demo</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/CODELAB.md" target="_blank" class="text-emerald-300 underline font-mono">CODELAB.md</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/PRESENTATION.md" target="_blank" class="text-emerald-300 underline font-mono">PRESENTATION.md</a>
-        </div>
-        <div class="col-span-2">
-          <strong class="text-white">Session Transcripts:</strong>
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/README.md" target="_blank" class="text-amber-300 underline font-mono">prompts/README.md</a>
-          (<a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md" target="_blank" class="text-cyan-300 underline font-mono">01</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md" target="_blank" class="text-cyan-300 underline font-mono">02</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md" target="_blank" class="text-cyan-300 underline font-mono">03</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md" target="_blank" class="text-cyan-300 underline font-mono">04</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/05-7407df5f-please-review-this-codebase.md" target="_blank" class="text-cyan-300 underline font-mono">05</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md" target="_blank" class="text-cyan-300 underline font-mono">06</a> &middot;
-          <a href="https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md" target="_blank" class="text-cyan-300 underline font-mono">07</a>)
-        </div>
-        <div class="col-span-2">
-          <strong class="text-white">pub.dev:</strong>
+        <div>
+          <strong class="text-white mr-1.5">pub.dev:</strong>
           <a href="https://pub.dev/packages/antigravity" target="_blank" class="text-purple-300 underline font-mono">antigravity</a> &middot;
           <a href="https://pub.dev/packages/a2ui_core" target="_blank" class="text-purple-300 underline font-mono">a2ui_core</a> &middot;
           <a href="https://pub.dev/packages/a2ui_agent" target="_blank" class="text-purple-300 underline font-mono">a2ui_agent</a> &middot;
