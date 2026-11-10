@@ -31,7 +31,7 @@ Before starting any slide-authoring task, read:
 
 ## Task 2: Scaffold `slides/`, Stage Assets, Generate Deck QR Code & Configure GitHub Pages CI
 
-- [ ] Scaffold `slides/` from [`.agents/skills/slidev-deck/resources/`](.agents/skills/slidev-deck/resources/):
+- [x] Scaffold `slides/` from [`.agents/skills/slidev-deck/resources/`](.agents/skills/slidev-deck/resources/):
   - Copy `package.json`, `vite.config.ts`, `style.css`, `components/AsciinemaPlayer.vue`, and `layouts/*.vue` into `slides/`.
   - Set `"build": "slidev build --base /agy_genui_demo/"` in `slides/package.json`.
   - Configure `slides/slides.md` with dark-theme headmatter (`hide: true`) and `src:` entries for:
@@ -42,14 +42,14 @@ Before starting any slide-authoring task, read:
     - `./acts/05-act4-a2ui.md`
     - `./acts/06-act5-fixup.md`
   - Create placeholder `.md` files for any acts not yet authored so `slidev build` succeeds.
-- [ ] Stage static assets into `slides/public/`:
+- [x] Stage static assets into `slides/public/`:
   - Copy `screenshots/step-0*.png` into `slides/public/images/`.
   - Generate a crisp SVG QR code at `slides/public/images/deck-qr.svg` encoding **`https://domesticmouse.github.io/agy_genui_demo/`** for the final slide (`S49`).
   - Copy [`agy-genui-codelab-cast-player.html`](agy-genui-codelab-cast-player.html) into `slides/public/agy-genui-codelab-cast-player.html` so it is served alongside the deck on GitHub Pages.
   - Run `npm --prefix slides run sync-casts` to copy `recordings/final/*.cast` into `slides/public/casts/`.
-- [ ] Add GitHub Pages workflow at `.github/workflows/deploy-slides.yml` (based on [`.agents/skills/slidev-deck/resources/deploy-slides.yml`](.agents/skills/slidev-deck/resources/deploy-slides.yml)) triggered on pushes to `main` touching `slides/**`, `recordings/final/**`, or `screenshots/**`.
-- [ ] Update [`.gitignore`](.gitignore) with `slides/node_modules/`, `slides/dist/`, `slides/.slidev.pid`, and `slides/.slidev.log`.
-- [ ] Install dependencies (`npm --prefix slides install`) and verify `npm --prefix slides run build` exits with code `0`.
+- [x] Add GitHub Pages workflow at `.github/workflows/deploy-slides.yml` (based on [`.agents/skills/slidev-deck/resources/deploy-slides.yml`](.agents/skills/slidev-deck/resources/deploy-slides.yml)) triggered on pushes to `main` touching `slides/**`, `recordings/final/**`, or `screenshots/**`.
+- [x] Update [`.gitignore`](.gitignore) with `slides/node_modules/`, `slides/dist/`, `slides/.slidev.pid`, and `slides/.slidev.log`.
+- [x] Install dependencies (`npm --prefix slides install`) and verify `npm --prefix slides run build` exits with code `0`.
 
 ---
 

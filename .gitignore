@@ -50,3 +50,10 @@ app.*.map.json
 # Skills
 /skills/
 
+# Slidev
+slides/node_modules/
+slides/dist/
+slides/.slidev.pid
+slides/.slidev.log
+
+
