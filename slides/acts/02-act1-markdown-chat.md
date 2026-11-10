@@ -35,16 +35,16 @@ title: "Terminal & Project Scaffold Commands"
 
   <div class="space-y-2.5 font-mono text-sm">
     <div v-click class="p-3 rounded-lg bg-[#0d0e12] border border-gray-800 text-gray-200">
-      <span class="text-gray-500 select-none">$ </span>flutter create agy_genui_demo --platforms=macos
+      <span class="text-gray-500 select-none">&#36; </span>flutter create agy_genui_demo --platforms=macos
     </div>
     <div v-click class="p-3 rounded-lg bg-[#0d0e12] border border-gray-800 text-gray-200">
-      <span class="text-gray-500 select-none">$ </span>cd agy_genui_demo &amp;&amp; git init &amp;&amp; git add . &amp;&amp; git commit -m "Initial commit"
+      <span class="text-gray-500 select-none">&#36; </span>cd agy_genui_demo &amp;&amp; git init &amp;&amp; git add . &amp;&amp; git commit -m "Initial commit"
     </div>
     <div v-click class="p-3 rounded-lg bg-[#0d0e12] border border-gray-800 text-cyan-300">
-      <span class="text-gray-500 select-none">$ </span>git tag step-00-scaffold
+      <span class="text-gray-500 select-none">&#36; </span>git tag step-00-scaffold
     </div>
     <div v-click class="p-3 rounded-lg bg-[#0d0e12] border border-cyan-500/40 text-amber-300 font-bold">
-      <span class="text-gray-500 select-none">$ </span>agy
+      <span class="text-gray-500 select-none">&#36; </span>agy
     </div>
   </div>
 </div>
