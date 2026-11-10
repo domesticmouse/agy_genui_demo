@@ -56,26 +56,26 @@ Before presenting a draft or edit to the user, verify:
 
 Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the **Git Tag** to check out, a screenshot of the macOS desktop app at that tag, and the live Hot Restart transition command.
 
-- [ ] **1. Act 1 Transition (`S07`) — Tag: `step-01-markdown-chat`**
-  - **Target Path**: `slides/public/images/step-01-markdown-chat.png`
+- [x] **1. Act 1 Transition (`S07`) — Tag: `step-01-markdown-chat`**
+  - **Captured Path**: [`screenshots/step-01-markdown-chat.png`](screenshots/step-01-markdown-chat.png) *(copied to `slides/public/images/step-01-markdown-chat.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-01-markdown-chat -- lib test`
-  - **What to Capture**: The macOS Markdown chat app showing the collapsible split-view thread sidebar on the left, the `Welcome to Markdown Chat` starter thread with rendered GitHub-Flavored Markdown tables and fenced code blocks, the `Copy Markdown` button on message bubbles, and the composer formatting toolbar + live preview pane at the bottom.
-- [ ] **2. Act 2 Transition (`S11`) — Tag: `step-02-antigravity-sdk`**
-  - **Target Path**: `slides/public/images/step-02-antigravity-sdk.png`
+  - **What Is Captured**: The macOS Markdown chat app showing the collapsible split-view thread sidebar on the left, the `Markdown Showcase` starter thread with `Hi **Bob**` and the simulated `Response: Hi Bob` breakdown (bold, italics, strikethrough `~~GFM~~`, blockquote, fenced code block, and GitHub-Flavored Markdown table), the `Copy Markdown` button on message bubbles, and the composer formatting toolbar + `Live Preview` toggle at the bottom.
+- [x] **2. Act 2 Transition (`S11`) — Tag: `step-02-antigravity-sdk`**
+  - **Captured Path**: [`screenshots/step-02-antigravity-sdk.png`](screenshots/step-02-antigravity-sdk.png) *(copied to `slides/public/images/step-02-antigravity-sdk.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-02-antigravity-sdk -- lib test`
-  - **What to Capture**: The macOS chat app connected to the live `package:antigravity` backend (`localharness`), showing a real multi-turn conversation thread with streamed assistant Markdown tokens and the `Antigravity SDK · Local Harness` status badge in the top toolbar.
-- [ ] **3. Act 3 Transition (`S20`) — Tag: `step-03-projects-sandbox`**
-  - **Target Path**: `slides/public/images/step-03-projects-sandbox.png`
+  - **What Is Captured**: The macOS chat app connected to the live `package:antigravity` backend (`localharness`), showing the prompt `Compare StatelessWidget and StatefulWidget in a Markdown table with a short Dart code example.` and streamed assistant Markdown tokens with a 3-column comparison table.
+- [x] **3. Act 3 Transition (`S20`) — Tag: `step-03-projects-sandbox`**
+  - **Captured Path**: [`screenshots/step-03-projects-sandbox.png`](screenshots/step-03-projects-sandbox.png) *(copied to `slides/public/images/step-03-projects-sandbox.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-03-projects-sandbox -- lib test`
-  - **What to Capture**: The project-grouped sidebar (`agy_genui_demo` project and `CWD` working-directory pill in the top toolbar) plus the amber **Sandbox Escape Review** card in the chat feed (`Deny` / `Approve & Run` buttons inspecting a command that attempts to access a path outside the project workspace).
-- [ ] **4. Act 4 Transition (`S41`) — Tag: `step-04-a2ui`**
-  - **Target Path**: `slides/public/images/step-04-a2ui.png`
+  - **What Is Captured**: The project-grouped sidebar (`agy_genui_demo` project and `/Users/brett/tmp/agy_genui_demo` working-directory pill in both the sidebar and top toolbar), `pwd` $\rightarrow$ `/Users/brett/tmp/agy_genui_demo` executed inside the `exebox` sandbox, and `What sort of project is this?` answered by inspecting the workspace.
+- [x] **4. Act 4 Transition (`S41`) — Tag: `step-04-a2ui`**
+  - **Captured Path**: [`screenshots/step-04-a2ui.png`](screenshots/step-04-a2ui.png) *(copied to `slides/public/images/step-04-a2ui.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-04-a2ui -- lib test`
-  - **What to Capture**: An inline interactive **A2UI v1.0 Clarifying Parameter Form** (`A2uiSurface`) rendered inside a message bubble with `ChoicePicker` chips, validation-checked `TextField`, `Slider`, reactive `formatParameterSummary` banner, `Use Audit Preset` RPC button, and quick-prompt chips above the composer.
-- [ ] **5. Act 5 Finale Transition (`S48`) — Tag: `step-05-fixup`**
-  - **Target Path**: `slides/public/images/step-05-fixup.png`
+  - **What Is Captured**: The prompt `Please give me a multi-choice question` streaming Markdown prose alongside an inline interactive **A2UI v1.0 `A2uiSurface` card** (`Computer History Trivia` with `ChoicePicker` chips `A) Python`, `B) Java`, `C) Ruby`, `D) Kotlin` and a validation-gated `Submit Answer` button).
+- [x] **5. Act 5 Finale Transition (`S48`) — Tag: `step-05-fixup`**
+  - **Captured Path**: [`screenshots/step-05-fixup.png`](screenshots/step-05-fixup.png) *(copied to `slides/public/images/step-05-fixup.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-05-fixup -- lib test`
-  - **What to Capture**: A live end-to-end two-way A2UI v1.0 interaction (e.g., the interactive multiple-choice Trivia `A2uiSurface` card after selecting an option and clicking **Submit Answer**, showing the user `⚡ Action` pill and `localharness`'s streamed follow-up response).
+  - **What Is Captured**: A live end-to-end bidirectional A2UI v1.0 RPC round-trip (`Invoke getWorkspaceInfo`), showing the first assistant bubble invoking the renderer-side `getWorkspaceInfo` function (`callRendererFunction`), `ChatViewModel` automatically flushing `RendererFunctionResponseMessage` back to `localharness` once the stream completes (`forwardRpcMessagesToAgent: true`), and the second assistant bubble rendering the returned `WorkspaceInfoSnapshot` (`Project Name: agy_genui_demo`, `Project ID: project-default`, `Working Directory: /Users/brett/tmp/agy_genui_demo`, `Active Thread Title: Markdown Showcase`, `Active Thread ID: thread-showcase`, `Theme Mode: light`).
 
 ---
 
@@ -184,13 +184,13 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
       - **MCP Server**: `dart-mcp-server`
 - **`S07` — Screenshot & Live Demo: `step-01-markdown-chat`** (`layout: hardware-callout`)
   - **Git Tag on Slide**: `step-01-markdown-chat`
-  - `image: /images/step-01-markdown-chat.png`
+  - **Screenshot**: [`screenshots/step-01-markdown-chat.png`](screenshots/step-01-markdown-chat.png) (`image: /images/step-01-markdown-chat.png` in Slidev)
   - **Live Demo Transition**:
     ```bash
     git clean -fd lib test && git checkout step-01-markdown-chat -- lib test
     # Press 'R' (Hot Restart) in flutter run!
     ```
-  - **What to Show Live**: Collapsible thread sidebar, GitHub-Flavored Markdown tables/code blocks, Copy Markdown button, composer formatting toolbar + live preview pane, Light/Dark colour scheme toggle, and simulated replies.
+  - **What to Show Live**: Collapsible thread sidebar, GitHub-Flavored Markdown tables/code blocks, Copy Markdown button, composer formatting toolbar + live preview pane, Light/Dark colour scheme toggle, and simulated replies (`Hi **Bob**`).
 
 ---
 
@@ -214,13 +214,13 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     - **Testing sanity-saver**: While reading `antigravity`'s `chat.dart`, `agy` realises `ChatResponse.chunks` uses a `Future.delayed(5ms)` polling loop and `Agent.start()` spawns a real OS process — which would hang Flutter's `FakeAsync` widget test zone! So it designs an injectable `AntigravityAgentSession` interface in [`lib/data/antigravity_chat_service.dart`](lib/data/antigravity_chat_service.dart) and tags `step-02-antigravity-sdk`.
 - **`S11` — Screenshot & Live Demo: `step-02-antigravity-sdk`** (`layout: hardware-callout`)
   - **Git Tag on Slide**: `step-02-antigravity-sdk`
-  - `image: /images/step-02-antigravity-sdk.png`
+  - **Screenshot**: [`screenshots/step-02-antigravity-sdk.png`](screenshots/step-02-antigravity-sdk.png) (`image: /images/step-02-antigravity-sdk.png` in Slidev)
   - **Live Demo Transition**:
     ```bash
     git clean -fd lib test && git checkout step-02-antigravity-sdk -- lib test
     # Press 'R' in flutter run!
     ```
-  - **What to Show Live**: Send a real prompt in the macOS app and watch live streaming tokens arrive from `localharness` via `package:antigravity`.
+  - **What to Show Live**: Send a real conceptual/Markdown prompt (e.g., `Compare StatelessWidget and StatefulWidget in a Markdown table with a short Dart code example.`) in the macOS app and watch live streaming tokens arrive from `localharness` via `package:antigravity`.
 
 ---
 
@@ -270,13 +270,13 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     - Even after automatic compaction, `agy` retains the earlier review findings, fixes per-thread draft preservation (`_draftsByThreadId`) and automatic session recreation when a thread's title or project workspace changes, verifies all 10 widget tests, and tags `step-03-projects-sandbox`.
 - **`S20` — Screenshot & Live Demo: `step-03-projects-sandbox`** (`layout: hardware-callout`)
   - **Git Tag on Slide**: `step-03-projects-sandbox`
-  - `image: /images/step-03-projects-sandbox.png`
+  - **Screenshot**: [`screenshots/step-03-projects-sandbox.png`](screenshots/step-03-projects-sandbox.png) (`image: /images/step-03-projects-sandbox.png` in Slidev)
   - **Live Demo Transition**:
     ```bash
     git clean -fd lib test && git checkout step-03-projects-sandbox -- lib test
     # Press 'R' in flutter run!
     ```
-  - **What to Show Live**: Project switcher & New Project dialogue (`CWD` badge in toolbar), per-thread isolated drafts, and the amber **Sandbox Escape Review** banner (`Deny` / `Approve & Run` backed by a `Completer<bool>`).
+  - **What to Show Live**: Project switcher & New Project dialogue (`/Users/brett/tmp/agy_genui_demo` working-directory pill in sidebar & toolbar), in-sandbox `run_command` execution (`pwd` and `What sort of project is this?`), per-thread isolated drafts, and the amber **Sandbox Escape Review** banner (`Deny` / `Approve & Run` backed by a `Completer<bool>`).
 
 ---
 
@@ -437,16 +437,17 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     2. `[v-click 2]` Slash command: `/clear`
 - **`S40` — Cast Clip 4.4: Implementing Parameter Forms & Custom `FunctionImplementation`s** (`layout: cast-full`)
   - `cast: /casts/04d-act4-forms-and-rpcs.cast`
-  - **Talking Points**: Implements [`lib/presentation/a2ui/a2ui_workspace_functions.dart`](lib/presentation/a2ui/a2ui_workspace_functions.dart) with `getWorkspaceInfo`, `listWorkspaceFiles`, `setSurfaceData`, and `formatParameterSummary` registered with `AllowedCallers.rendererOrAgent`, plus 17 passing widget tests, and tags `step-04-a2ui`.
+  - **Talking Points**: Implements [`lib/data/catalog/renderer_rpc_functions.dart`](lib/data/catalog/renderer_rpc_functions.dart) with `getWorkspaceInfo`, `listWorkspaceFiles`, `setSurfaceData`, and `formatParameterSummary` registered with `AllowedCallers.rendererOrAgent`, plus 17 passing widget tests, and tags `step-04-a2ui`.
 - **`S41` — Screenshot & Live Demo: `step-04-a2ui`** (`layout: hardware-callout`)
   - **Git Tag on Slide**: `step-04-a2ui`
-  - `image: /images/step-04-a2ui.png`
+  - **Screenshot**: [`screenshots/step-04-a2ui.png`](screenshots/step-04-a2ui.png) (`image: /images/step-04-a2ui.png` in Slidev)
   - **Live Demo Transition**:
     ```bash
     git clean -fd lib test && git checkout step-04-a2ui -- lib test
     # Press 'R' in flutter run!
     ```
-  - **What to Show Live**: Quick-prompt chips (`Clarifying parameter form` and `Run workspace RPC function`), live reactive form summary (`formatParameterSummary`), `Use Audit Preset` button (`setSurfaceData`), and validation-gated submit button.
+  - **What to Show Live**: Prompt `Please give me a multi-choice question` streaming an inline `A2uiSurface` card (`Computer History Trivia` with `ChoicePicker` chips and validation-gated `Submit Answer` button), or click `+ New Thread` to try the quick-prompt chips (`Clarifying parameter form` and `Run workspace RPC function`).
+  - **Cliffhanger into Act 5**: Notice what happens if we click `Submit Answer` right now at `step-04-a2ui` — it records the action locally, *but doesn't send a turn back to `localharness` yet!* Why? Let's ask a fresh session of `agy` to review the codebase in Act 5.
 
 ---
 
@@ -467,7 +468,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     1. `[v-click 1]` **`forwardSurfaceActionsToAgent` & `forwardRpcMessagesToAgent` defaulted to `false` in [`lib/main.dart`](lib/main.dart)**: To keep earlier widget tests deterministic, Act 4 had left both flags defaulting to `false` in `ChatViewModel` — meaning clicking an A2UI surface button in the live desktop app recorded the action pill locally without ever forwarding it to `localharness`!
     2. `[v-click 2]` **Stream Self-Cancellation on Multi-RPC Turns**: Calling `sendRpcMessageToAgent` synchronously inside `outboundListener` mid-stream incremented `_requestGeneration` and cancelled the active LLM stream whenever multiple `callRendererFunction` envelopes arrived in one block.
     3. `[v-click 3]` **Auto-Titling Overwrote Custom Thread Titles on First Message**: `thread.messages.isEmpty` overwrote user-renamed threads on their first message.
-    4. `[v-click 4]` **Sandbox-Escape Path Heuristics Edge Cases**: [`lib/data/antigravity_chat_service.dart`](lib/data/antigravity_chat_service.dart) missed `--flag=/outside/path`, `$HOME` expansion, and trailing `/..`, while false-positiving on `awk '/pattern/'`.
+    4. `[v-click 4]` **Sandbox-Escape Path Heuristics Edge Cases**: [`lib/data/repositories/chat_repository.dart`](lib/data/repositories/chat_repository.dart) missed `--flag=/outside/path`, `$HOME` expansion, and trailing `/..`, while false-positiving on `awk '/pattern/'`.
     5. `[v-click 5]` **Unbounded Synchronous `listSync()` in `ListWorkspaceFilesFunction`**: Could block the Flutter UI thread if a user pointed a project at a huge parent directory.
 - **`S46a` — Lead-in: Prompt 5.2 (Fix Surfaced Issues)** (`layout: skill-breakdown`, `way: 3`)
   - **Prompt 5.2**:
@@ -481,18 +482,18 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     ```
 - **`S47` — Cast Clip 5.2: Fixing All 5 Issues & Tagging `step-05-fixup`** (`layout: cast-full`)
   - `cast: /casts/05b-act5-fixups-and-tag.cast`
-  - **Talking Points**: Enables `forwardSurfaceActionsToAgent: true` and `forwardRpcMessagesToAgent: true` in [`lib/main.dart`](lib/main.dart), batches pending RPC responses in [`lib/presentation/viewmodels/chat_view_model.dart`](lib/presentation/viewmodels/chat_view_model.dart) until the active stream finishes, hardens sandbox path heuristics, caps directory traversal in [`lib/presentation/a2ui/a2ui_workspace_functions.dart`](lib/presentation/a2ui/a2ui_workspace_functions.dart), brings the test suite to 21 passing widget tests, and tags `step-05-fixup`.
+  - **Talking Points**: Enables `forwardSurfaceActionsToAgent: true` and `forwardRpcMessagesToAgent: true` in [`lib/main.dart`](lib/main.dart), batches pending RPC responses in [`lib/ui/features/chat/view_models/chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart) until the active stream finishes, hardens sandbox path heuristics, caps directory traversal in [`lib/data/catalog/renderer_rpc_functions.dart`](lib/data/catalog/renderer_rpc_functions.dart), brings the test suite to 21 passing widget tests, and tags `step-05-fixup`.
 - **`S48` — Screenshot & Live Finale Demo: `step-05-fixup`** (`layout: hardware-callout`)
   - **Git Tag on Slide**: `step-05-fixup`
-  - `image: /images/step-05-fixup.png`
+  - **Screenshot**: [`screenshots/step-05-fixup.png`](screenshots/step-05-fixup.png) (`image: /images/step-05-fixup.png` in Slidev)
   - **Live Demo Transition**:
     ```bash
     git clean -fd lib test && git checkout step-05-fixup -- lib test
     # Press 'R' in flutter run!
     ```
   - **What to Show Live** ([Session 06 Transcript](prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md)):
-    1. Ask `Please ask a multiple choice question` $\rightarrow$ streams an interactive A2UI v1.0 Trivia card $\rightarrow$ pick **Java** and click **Submit Answer** $\rightarrow$ automatic two-way `ActionMessage` + `a2uiRendererDataModel` round-trip back to `localharness`!
-    2. Ask `Please review this codebase` $\rightarrow$ runs `ls`/`find` inside the `exebox` sandbox and streams back a custom **Codebase Review Clarifying Parameter Form**.
+    1. Ask `Invoke getWorkspaceInfo` $\rightarrow$ `localharness` emits `callRendererFunction: getWorkspaceInfo`, Flutter's `MessageProcessor` executes [`GetWorkspaceInfoFunction`](lib/data/catalog/renderer_rpc_functions.dart), `ChatViewModel` flushes the batched `RendererFunctionResponseMessage` back to `localharness` when the first stream finishes (`forwardRpcMessagesToAgent: true`), and the agent renders the live `Workspace Information` table (`Project Name`, `Working Directory`, `Active Thread Title`, `Theme Mode: light`).
+    2. Ask `Please ask a multiple choice question` $\rightarrow$ streams an interactive A2UI v1.0 Trivia card $\rightarrow$ pick **Java** and click **Submit Answer** $\rightarrow$ automatic two-way `ActionMessage` + `a2uiRendererDataModel` round-trip back to `localharness`!
 - **`S49` — Takeaways & Resources** (`layout: default`)
   - **Treat AI as a curious accomplice, not an infallible oracle**: Share the false starts (`workspaceOnly` vs `enableSandbox`, `Directory.current` in Finder, `forwardSurfaceActionsToAgent: false`) — and ask the agent to audit its own work in a fresh `/clear` session.
   - **Manage context bloat deliberately (and expect compaction when you get greedy)**: Using `/clear` at the end of each milestone keeps context sharp, though stacking multi-step exploration and implementation turns in Acts 3 and 4 still triggered automatic context compaction (`Conversation compacted`) mid-flight.
