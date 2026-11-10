@@ -15,10 +15,13 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
   - Inside a slide that has multiple commands, numbered prompt items, or multiple sentences, each line/sentence is revealed step-by-step using Slidev **`v-click`** animations.
 - In **Act 4**, we dedicate **7 slides** after Clip 4.2 to unpack the architecture and 4 seamlines between `a2ui_core`, `a2ui_agent`, and `a2ui_flutter`, and **3 slides** after Clip 4.3 to walk through the 6 A2UI capability options `agy` proposed for the codebase.
 - At the end of each of the 5 Acts (where we create a Git tag), we show a **Screenshot & Live Demo Slide** (`layout: hardware-callout`) with the hot-restart checkout command to transition smoothly into the live macOS app.
-- **Deck Rendering Libraries**:
-  - Include **MathJS** rendering for TeX markup (e.g., $\rightarrow$, $\leftrightarrow$).
-  - Include **PrismJS** for syntax highlighting of any code blocks included in the deck.
-  - Include **MermaidJS** for rendering architecture, dependency, and sequence diagrams (`S03`, `S27`, `S31`, `S32`).
+- **Deck Rendering Libraries, LaTeX Guardrails & GitHub Hosting**:
+  - Use Slidev's built-in **Shiki** (`highlighter: shiki`) for syntax highlighting, **KaTeX** for any standalone math, and **MermaidJS** for architecture, dependency, and sequence diagrams (`S03`, `S27`, `S31`, `S32`).
+  - **Zero Raw LaTeX Leaks Rule**: CommonMark treats everything inside block-level HTML tags (`<div>`, `<ol>`, `<li>`, `<h3>`) as raw HTML and skips `markdown-it-katex`, causing `$...$` inside HTML wrappers to render verbatim as raw LaTeX text. Always use HTML entities or Unicode arrows (`&rarr;` / `→` and `&harr;` / `↔`) instead of TeX arrows inside HTML blocks, and escape literal dollar signs (`\$HOME`) when outside backticks.
+  - **GitHub Pages Hosting & Links**:
+    - Hosted at **`https://domesticmouse.github.io/agy_genui_demo/`** (`slidev build --base /agy_genui_demo/`) via `.github/workflows/deploy-slides.yml`.
+    - All slide links to repository files (`CODELAB.md`, `PRESENTATION.md`, `prompts/*.md`, `lib/...`) must use full GitHub URLs (`https://github.com/domesticmouse/agy_genui_demo/blob/main/...`).
+    - The final slide (`S49`) includes a **QR Code** (`slides/public/images/deck-qr.svg`) pointing to `https://domesticmouse.github.io/agy_genui_demo/` alongside links to the GitHub repository, session transcripts, interactive cast player, and pub.dev packages (`antigravity`, `a2ui_core`, `a2ui_agent`, `a2ui_flutter`, `flutter_markdown_plus`).
 
 ---
 
@@ -67,7 +70,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
 - [x] **3. Act 3 Transition (`S20`) — Tag: `step-03-projects-sandbox`**
   - **Captured Path**: [`screenshots/step-03-projects-sandbox.png`](screenshots/step-03-projects-sandbox.png) *(copied to `slides/public/images/step-03-projects-sandbox.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-03-projects-sandbox -- lib test`
-  - **What Is Captured**: The project-grouped sidebar (`agy_genui_demo` project and `/Users/brett/tmp/agy_genui_demo` working-directory pill in both the sidebar and top toolbar), `pwd` $\rightarrow$ `/Users/brett/tmp/agy_genui_demo` executed inside the `exebox` sandbox, and `What sort of project is this?` answered by inspecting the workspace.
+  - **What Is Captured**: The project-grouped sidebar (`agy_genui_demo` project and `/Users/brett/tmp/agy_genui_demo` working-directory pill in both the sidebar and top toolbar), `pwd` → `/Users/brett/tmp/agy_genui_demo` executed inside the `exebox` sandbox, and `What sort of project is this?` answered by inspecting the workspace.
 - [x] **4. Act 4 Transition (`S41`) — Tag: `step-04-a2ui`**
   - **Captured Path**: [`screenshots/step-04-a2ui.png`](screenshots/step-04-a2ui.png) *(copied to `slides/public/images/step-04-a2ui.png` for Slidev)*
   - **Checkout Command**: `git clean -fd lib test && git checkout step-04-a2ui -- lib test`
@@ -116,11 +119,11 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
   - Revealed with `v-click` (1 ingredient per click):
     1. `[v-click 1]` **Flutter (macOS Desktop)**: Fast, expressive multi-platform UI with sub-second hot-restart and strict static analysis (`dart analyze`, `flutter_lints`).
     2. `[v-click 2]` **Google Antigravity (`agy` CLI & `package:antigravity` SDK)**: Both our coding accomplice building the app *and* the embedded agent backend running inside the app via `~/.antigravity/bin/localharness`.
-    3. `[v-click 3]` **GenUI $\rightarrow$ A2UI v1.0 (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`)**: Replacing `package:genui` with the modular A2UI v1.0 catalogue and protocol for streaming live interactive UI surfaces inline with Markdown.
+    3. `[v-click 3]` **GenUI → A2UI v1.0 (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`)**: Replacing `package:genui` with the modular A2UI v1.0 catalogue and protocol for streaming live interactive UI surfaces inline with Markdown.
   - **Presenter Notes**: Having an AI accomplice makes intimidating or brand-new APIs approachable, provided we pair that curiosity with real engineering hygiene — linters, formatters, and widget tests that act as sanity-savers and keep us honest.
 - **`S03` — How We Built This: 5 Acts, `/clear`, and Git Tags** (`layout: default`)
   - Overview of the 5 tagged milestones, showing how each stage resets context with `/clear`, verifies `dart analyze` and `flutter test`, and ends with a Git tag we can hot-restart into in `<1s`:
-    1. `step-00-scaffold` $\rightarrow$ `step-01-markdown-chat` — [Session 01 Transcript](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md)
+    1. `step-00-scaffold` → `step-01-markdown-chat` — [Session 01 Transcript](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md)
     2. `step-02-antigravity-sdk` — [Session 02 Transcript](prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md)
     3. `step-03-projects-sandbox` — [Session 03 Transcript](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md)
     4. `step-04-a2ui` — [Session 04 Transcript](prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md)
@@ -252,7 +255,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
   - **Talking Points During Playback** ([Session 03 Transcript](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md)):
     - **Checking my wrong assumption**: `agy` inspects `policy.dart`, `capabilities.dart`, and even runs `strings` on the `~/.antigravity/bin/localharness` Go binary!
     - Gently proves me wrong: `workspaceOnly` only confines file tools (`view_file`, `write_to_file`, `grep_search`, etc.). It is actually `CapabilitiesConfig(runCommand: RunCommandConfig(enableSandbox: true))` that enables the OS-level `exebox` sandbox and exposes `BypassSandbox` on `run_command`.
-    - Pauses at Marker `[19]` with `ask_question`: *"How should projects and conversation threads be organized in the UI?"* $\rightarrow$ we choose Option 1 (Projects group threads).
+    - Pauses at Marker `[19]` with `ask_question`: *"How should projects and conversation threads be organized in the UI?"* → we choose Option 1 (Projects group threads).
 - **`S18a` — Lead-in: Prompt 3.3 (Fix Review Issues)** (`layout: skill-breakdown`, `way: 3`)
   - Single-sentence prompt:
     ```text
@@ -339,14 +342,14 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     2. `[v-click 2]` **Flutter Basic Catalogue (`basicCatalog()`)**: Returns a `CatalogImplementation` (`Catalog<ComponentImplementation, FunctionImplementation>`) implementing all 18 A2UI v1.0 basic components (`Card`, `Row`, `Column`, `List`, `Tabs`, `Modal`, `Text`, `Image`, `Icon`, `Video`, `AudioPlayer`, `Divider`, `Button`, `TextField`, `CheckBox`, `ChoicePicker`, `Slider`, `DateTimeInput`).
     3. `[v-click 3]` **Reactive Surface Widget (`A2uiSurface`)**: Takes a `SurfaceModel<ComponentImplementation>`, attaches a `NodeResolver<ComponentImplementation>`, and rebuilds only affected widget subtrees via `SignalState` as signals change.
 - **`S31` — Seamlines 1 & 2 (5 of 7): Catalogue Type Erasure & Stream Processing** (`layout: skill-breakdown`, `way: 1`)
-  - **Seamline 1: `ComponentApi` $\leftrightarrow$ `ComponentImplementation` (`a2ui_core` $\leftrightarrow$ `a2ui_flutter` & `a2ui_agent`)**
+  - **Seamline 1: `ComponentApi` ↔ `ComponentImplementation` (`a2ui_core` ↔ `a2ui_flutter` & `a2ui_agent`)**
     - `a2ui_core` is generic over `T extends ComponentApi`.
     - `a2ui_flutter` provides `basicCatalog()` (`Catalog<ComponentImplementation, FunctionImplementation>`).
     - `a2ui_agent`'s `CatalogConfig.fromCatalog(a2uiCatalog)` erases the Flutter widget builder down to `ComponentApi` JSON Schemas so prompt generation never imports Flutter.
-  - **Seamline 2: `A2uiRequestProcessor` $\leftrightarrow$ `MessageProcessor<T>` (`a2ui_agent` $\leftrightarrow$ `a2ui_core`)**
-    - `A2uiRequestProcessor` converts raw LLM text chunks (`<a2ui-json>`) $\rightarrow$ `List<AgentToRendererMessage>`.
-    - `MessageProcessor<T>` consumes `List<AgentToRendererMessage>` $\rightarrow$ mutates `SurfaceGroupModel<T>` / `SurfaceModel<T>`.
-    - Can run across a network wire (Server $\rightarrow$ Client) or fused in-process via `RendererState.of(renderer)` and `StreamedAnswer<ComponentImplementation>` (`AnswerTextPart`, `AnswerSurfacePart`, `AnswerErrorPart`).
+  - **Seamline 2: `A2uiRequestProcessor` ↔ `MessageProcessor<T>` (`a2ui_agent` ↔ `a2ui_core`)**
+    - `A2uiRequestProcessor` converts raw LLM text chunks (`<a2ui-json>`) → `List<AgentToRendererMessage>`.
+    - `MessageProcessor<T>` consumes `List<AgentToRendererMessage>` → mutates `SurfaceGroupModel<T>` / `SurfaceModel<T>`.
+    - Can run across a network wire (Server → Client) or fused in-process via `RendererState.of(renderer)` and `StreamedAnswer<ComponentImplementation>` (`AnswerTextPart`, `AnswerSurfacePart`, `AnswerErrorPart`).
   - **Mermaid Diagram (Inbound Streaming Pipeline)**:
     ```mermaid
     flowchart LR
@@ -357,9 +360,9 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
       SurfModel -->|"Mounts"| Widget["A2uiSurface (a2ui_flutter)"]
     ```
 - **`S32` — Seamlines 3 & 4 (6 of 7): Reactive Surface Mounting & Two-Way Actions** (`layout: skill-breakdown`, `way: 2`)
-  - **Seamline 3: `SurfaceModel<ComponentImplementation>` $\leftrightarrow$ `A2uiSurface` (`a2ui_core` $\leftrightarrow$ `a2ui_flutter`)**
+  - **Seamline 3: `SurfaceModel<ComponentImplementation>` ↔ `A2uiSurface` (`a2ui_core` ↔ `a2ui_flutter`)**
     - `MessageProcessor<ComponentImplementation>` (or `AnswerSurfacePart.surface`) produces a `SurfaceModel<ComponentImplementation>` passed directly to `A2uiSurface(key: ObjectKey(surface), surface: surface)`, wrapped in `A2uiMarkdown` for rich text.
-  - **Seamline 4: `onAction` & `outboundListener` $\leftrightarrow$ `ActionMessage` + `getRendererDataModel` (`a2ui_flutter` $\rightarrow$ `a2ui_core` $\rightarrow$ `a2ui_agent`)**
+  - **Seamline 4: `onAction` & `outboundListener` ↔ `ActionMessage` + `getRendererDataModel` (`a2ui_flutter` → `a2ui_core` → `a2ui_agent`)**
     1. *Local Data Bindings (`WritableBinding`)*: Editing `TextField`, `CheckBox`, or `Slider` bound to `{"@path": "/..."}` mutates `SurfaceModel.dataModel` in-place in `a2ui_core` without round-tripping to the agent.
     2. *Agent Actions (`NodeAction`)*: Pressing a `Button` resolves `action.event.context` against `SurfaceModel.dataModel` and emits `A2uiRendererAction` on `renderer.model.onAction`.
     3. *Outbound Turn*: Wrapped in `a2ui_core`'s `ActionMessage` + `renderer.getRendererDataModel(version: A2uiProtocolVersion.v1_0)` (plus `outboundListener` for `RendererFunctionResponseMessage` / `CallAgentFunctionMessage`) and sent back to the agent.
@@ -397,7 +400,7 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
   - `cast: /casts/04c-act4-a2ui-options.cast`
 - **`S36` — `agy`'s Suggestions (1 of 3): Action Loops & Custom Developer Catalogue** (`layout: default`)
   - Revealed with `v-click`:
-    - `[v-click 1]` **Option 1: Live Two-Way Action Loop (`Button` $\rightarrow$ Agent Turn + `a2uiRendererDataModel` Sync)**
+    - `[v-click 1]` **Option 1: Live Two-Way Action Loop (`Button` → Agent Turn + `a2uiRendererDataModel` Sync)**
       - Automatically dispatch `ActionMessage` + `a2uiRendererDataModel` to the thread's Antigravity `Agent` when a user clicks an `A2uiSurface` `Button`.
       - Show a compact user "Action Pill" in the chat feed (e.g., `⚡ Action: book_flight (destination: Kyoto)`) and let the agent mutate the existing surface in-place via `updateDataModel` / `updateComponents` or stream a follow-up surface.
       - Attach `renderer.getRendererDataModel(version: A2uiProtocolVersion.v1_0)` to regular text prompts when active surfaces have `sendDataModel: true`.
@@ -492,14 +495,19 @@ Each of the 5 Acts ends with a `layout: hardware-callout` slide displaying the *
     # Press 'R' in flutter run!
     ```
   - **What to Show Live** ([Session 06 Transcript](prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md)):
-    1. Ask `Invoke getWorkspaceInfo` $\rightarrow$ `localharness` emits `callRendererFunction: getWorkspaceInfo`, Flutter's `MessageProcessor` executes [`GetWorkspaceInfoFunction`](lib/data/catalog/renderer_rpc_functions.dart), `ChatViewModel` flushes the batched `RendererFunctionResponseMessage` back to `localharness` when the first stream finishes (`forwardRpcMessagesToAgent: true`), and the agent renders the live `Workspace Information` table (`Project Name`, `Working Directory`, `Active Thread Title`, `Theme Mode: light`).
-    2. Ask `Please ask a multiple choice question` $\rightarrow$ streams an interactive A2UI v1.0 Trivia card $\rightarrow$ pick **Java** and click **Submit Answer** $\rightarrow$ automatic two-way `ActionMessage` + `a2uiRendererDataModel` round-trip back to `localharness`!
-- **`S49` — Takeaways & Resources** (`layout: default`)
-  - **Treat AI as a curious accomplice, not an infallible oracle**: Share the false starts (`workspaceOnly` vs `enableSandbox`, `Directory.current` in Finder, `forwardSurfaceActionsToAgent: false`) — and ask the agent to audit its own work in a fresh `/clear` session.
-  - **Manage context bloat deliberately (and expect compaction when you get greedy)**: Using `/clear` at the end of each milestone keeps context sharp, though stacking multi-step exploration and implementation turns in Acts 3 and 4 still triggered automatic context compaction (`Conversation compacted`) mid-flight.
-  - **Engineering hygiene is a sanity-saver**: `dart analyze`, `flutter_lints`, `dart format`, and widget tests keep the codebase evergreen so humans can focus on semantics.
-  - **Git tags + Hot Restart = Live-Demo Time Travel**: `git checkout <tag> -- lib test` lets us jump between any of the 5 acts (`step-01-markdown-chat` through `step-05-fixup`) in under a second.
+    1. Ask `Invoke getWorkspaceInfo` → `localharness` emits `callRendererFunction: getWorkspaceInfo`, Flutter's `MessageProcessor` executes [`GetWorkspaceInfoFunction`](lib/data/catalog/renderer_rpc_functions.dart), `ChatViewModel` flushes the batched `RendererFunctionResponseMessage` back to `localharness` when the first stream finishes (`forwardRpcMessagesToAgent: true`), and the agent renders the live `Workspace Information` table (`Project Name`, `Working Directory`, `Active Thread Title`, `Theme Mode: light`).
+    2. Ask `Please ask a multiple choice question` → streams an interactive A2UI v1.0 Trivia card → pick **Java** and click **Submit Answer** → automatic two-way `ActionMessage` + `a2uiRendererDataModel` round-trip back to `localharness`!
+- **`S49` — Takeaways, Resources & Thank You (with Deck QR Code)** (`layout: default`)
+  - **Takeaways**:
+    - **Treat AI as a curious accomplice, not an infallible oracle**: Share the false starts (`workspaceOnly` vs `enableSandbox`, `Directory.current` in Finder, `forwardSurfaceActionsToAgent: false`) — and ask the agent to audit its own work in a fresh `/clear` session.
+    - **Manage context bloat deliberately (and expect compaction when you get greedy)**: Using `/clear` at the end of each milestone keeps context sharp, though stacking multi-step exploration and implementation turns in Acts 3 and 4 still triggered automatic context compaction (`Conversation compacted`) mid-flight.
+    - **Engineering hygiene is a sanity-saver**: `dart analyze`, `flutter_lints`, `dart format`, and widget tests keep the codebase evergreen so humans can focus on semantics.
+    - **Git tags + Hot Restart = Live-Demo Time Travel**: `git checkout <tag> -- lib test` lets us jump between any of the 5 acts (`step-01-markdown-chat` through `step-05-fixup`) in under a second.
+  - **QR Code (Right Column / Callout Card)**:
+    - **QR Code Asset**: `slides/public/images/deck-qr.svg` (`image: /images/deck-qr.svg`) encoding **`https://domesticmouse.github.io/agy_genui_demo/`** so the audience can scan the deck and click every resource link below directly from their phone.
   - **Resources & Links**:
-    - Repository & Codelab: [`CODELAB.md`](CODELAB.md) · [`PRESENTATION.md`](PRESENTATION.md)
-    - Exported Session Transcripts (via `agy-brain-explorer`): [`prompts/README.md`](prompts/README.md) ([01](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md) · [02](prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md) · [03](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md) · [04](prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md) · [05](prompts/05-7407df5f-please-review-this-codebase.md) · [06](prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md) · [07](prompts/07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md))
-    - Standalone Interactive Cast Player: [`agy-genui-codelab-cast-player.html`](agy-genui-codelab-cast-player.html)
+    - **Live Presentation Deck**: [`https://domesticmouse.github.io/agy_genui_demo/`](https://domesticmouse.github.io/agy_genui_demo/)
+    - **GitHub Repository & Codelab**: [`github.com/domesticmouse/agy_genui_demo`](https://github.com/domesticmouse/agy_genui_demo) · [`CODELAB.md`](https://github.com/domesticmouse/agy_genui_demo/blob/main/CODELAB.md) · [`PRESENTATION.md`](https://github.com/domesticmouse/agy_genui_demo/blob/main/PRESENTATION.md)
+    - **Exported Session Transcripts (via `agy-brain-explorer`)**: [`prompts/README.md`](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/README.md) ([01](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md) · [02](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md) · [03](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md) · [04](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md) · [05](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/05-7407df5f-please-review-this-codebase.md) · [06](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md) · [07](https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md))
+    - **Standalone Interactive Cast Player**: [`agy-genui-codelab-cast-player.html`](https://domesticmouse.github.io/agy_genui_demo/agy-genui-codelab-cast-player.html)
+    - **Pub.dev Packages**: [`antigravity`](https://pub.dev/packages/antigravity) · [`a2ui_core`](https://pub.dev/packages/a2ui_core) · [`a2ui_agent`](https://pub.dev/packages/a2ui_agent) · [`a2ui_flutter`](https://pub.dev/packages/a2ui_flutter) · [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus)
