@@ -11,6 +11,7 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
 - The Dart GenUI package (`genui`) has just been deprecated and replaced by the **A2UI** packages (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`).
 - We collapse Setup (`step-00-scaffold`) and Act 1 (`step-01-markdown-chat`) into the first cast clip since everyone knows what the default Flutter counter app looks like; our first live demo happens at the end of Act 1.
 - Each prompt gets its own **Lead-in Slide** (showing the exact commands/prompt and what to watch for) followed by its **Cast Clip Slide** (`layout: cast-full`).
+- In **Act 4**, we dedicate **7 slides** after Clip 4.2 to unpack the architecture and 4 seamlines between `a2ui_core`, `a2ui_agent`, and `a2ui_flutter`, and **3 slides** after Clip 4.3 to walk through the 6 A2UI capability options `agy` proposed for the codebase.
 - At the end of each of the 5 Acts (where we create a Git tag), we show a **Screenshot & Live Demo Slide** (`layout: hardware-callout`) with the hot-restart checkout command to transition smoothly into the live macOS app.
 
 ---
@@ -45,7 +46,7 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
   - **Three ingredients**:
     1. **Flutter (macOS Desktop)**: Fast, expressive multi-platform UI with instant hot-restart.
     2. **Google Antigravity (`agy` CLI & `package:antigravity` SDK)**: Both the coding agent building our app *and* the embedded agent backend running inside our app via `localharness`.
-    3. **GenUI $\rightarrow$ A2UI v1.0 (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`)**: Notice that `package:genui` was just deprecated and replaced by the modular A2UI v1.0 packages for streaming live interactive UI surfaces inline with Markdown.
+    3. **GenUI $\rightarrow$ A2UI v1.0 (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`)**: `package:genui` was just deprecated and replaced by the modular A2UI v1.0 packages for streaming live interactive UI surfaces inline with Markdown.
 - **`S03` — How We Built This: 5 Acts, `/clear`, and Git Tags** (`layout: default`)
   - Overview table of the 5 tagged stages (`step-01-markdown-chat` through `step-05-fixup`), showing how each stage resets context with `/clear` and ends with a Git tag we can hot-restart into in `<1s`.
 
@@ -128,7 +129,7 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
     ```
 - **`S14` — Cast Clip 3.1: Investigating Initial Working Directory** (`layout: cast-full`)
   - `cast: /casts/03a-act3-cwd-review.cast`
-- **`S15` — What `agy` Found: The macOS `.app` Bundle Root (` / `) Trap** (`layout: default`)
+- **`S15` — What `agy` Found: The macOS `.app` Bundle Root (`/`) Trap** (`layout: default`)
   - 2-column comparison (`Anti-Pattern: Implicit Directory.current` vs. `Target Architecture: Explicit Project Workspaces`):
     - Passing `workspaces: null` to `LocalAgentConfig` defaults to `Directory.current.absolute.path`.
     - From `flutter run`, `Directory.current` is `./`. From Finder/Dock (`agy_genui_demo.app`), macOS `launchd` sets `Directory.current` to **`/` (root)!**
@@ -182,6 +183,9 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
     1. **A2UI v1.0 `Text.variant` Schema Constraint**: `BasicCatalog.v1_0` only allows `'caption'` or `'body'` (v0.8 allowed `'h5'`).
     2. **Inline Backtick `<a2ui-json>` Tag Collision**: `DirectJsonParser` strips backticks around `` `<a2ui-json>` `` to forgive LLMs that wrap tags in inline code, so mentioning literal `` `<a2ui-json>` `` in prose opened the JSON block prematurely.
     3. **`A2uiMarkdown` Inside `OutlinedButton` Intercepting Taps**: Wrapping `A2uiSurface` with `A2uiMarkdown` made button labels `selectable: true` and full-width, swallowing pointer taps until `selectable: false, fitContent: true` was set.
+
+#### Deep Dive Part A: A2UI Package Architecture & Seamlines (Multiple Slides)
+
 - **`S25` — Lead-in: Prompt 4.2 (Research the A2UI Package Seamlines)** (`layout: skill-breakdown`, `way: 2`)
   - **Prompt 4.2**:
     ```text
@@ -189,16 +193,83 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
     ```
 - **`S26` — Cast Clip 4.2: Researching A2UI Package Seamlines** (`layout: cast-full`)
   - `cast: /casts/04b-act4-a2ui-seamlines.cast`
-- **`S27` — The 3 A2UI Packages & Their 4 Seamlines** (`layout: default`)
-  - Architectural summary of `a2ui_core` (headless protocol, `Catalog`, `MessageProcessor`, `SurfaceModel` signals), `a2ui_agent` (`A2uiGenerator`, `DirectJsonFormatFactory`, `StreamedAnswer`), and `a2ui_flutter` (`basicCatalog()`, `A2uiSurface`, `A2uiMarkdown`).
-- **`S28` — Lead-in: Prompt 4.3 (Explore Capabilities for This Codebase)** (`layout: skill-breakdown`, `way: 3`)
+- **`S27` — Package 1: `a2ui_core` — Headless Protocol, State & Expression Engine (Pure Dart)** (`layout: default`)
+  - Zero dependency on Flutter or any LLM SDK:
+    1. **Wire Protocol & Envelopes**: `AgentToRendererMessage` (`CreateSurfaceMessage`, `UpdateComponentsMessage`, `UpdateDataModelMessage`, `DeleteSurfaceMessage`, `CallRendererFunctionMessage`) and `RendererToAgentMessage` (`ActionMessage`, `ErrorMessage`, `FunctionResponseMessage`).
+    2. **Catalog Specification**: `Catalog<T extends ComponentApi, F extends FunctionApi>` and `BasicCatalog.v1_0` (JSON Schemas for components + client-side functions like `formatString`, `required`, `regex`).
+    3. **Message Routing & Validation**: `MessageProcessor<T>` validates messages against catalog schemas (`PayloadValidator`) and component graph topology (`ValidationConfig`), applying them to `SurfaceGroupModel<T>`.
+    4. **Reactive Surface & Node Resolution**: `SurfaceModel<T>`, `DataModel`, `GenericBinder`, and `NodeResolver<T>` turn a surface's flat component map and JSON Pointer data model (`@path`, `@call`) into a reactive tree of `ComponentNode<T>` backed by `preact_signals`.
+- **`S28` — Package 2: `a2ui_agent` — Prompt Generation, Stream Parsing & JSON Healing (Pure Dart)** (`layout: default`)
+  - Depends only on `a2ui_core` (and `antlr4` for Express syntax); bridges an LLM/agent to `a2ui_core`:
+    1. **Capability Negotiation**: `A2uiGenerator` matches the client's `A2uiRendererCapabilities` against available `CatalogConfig`s (optionally pruning via `PruningTransformer`) to build an `A2uiRequestProcessor`.
+    2. **System Prompt Generation**: `a2uiRequestProcessor.promptSnippet` emits the system instructions and `---BEGIN A2UI JSON SCHEMA---` teaching the LLM to output `<a2ui-json>` (`DirectJsonFormatFactory`) or A2UI Express DSL (`ExpressFormatFactory`).
+    3. **Streaming LLM Parser & JSON Healer**: `DirectJsonParser` and `DirectJsonContinuingResponseStream` split raw LLM token streams into prose `TextPart`, healed incremental `A2uiPart` (`List<AgentToRendererMessage>`), and `ErrorPart` while validating against `RendererState` with transactional rollback on invalid blocks.
+- **`S29` — Package 3: `a2ui_flutter` — Flutter Widget Adapter (`package:flutter`)** (`layout: default`)
+  - Depends on `a2ui_core` and `flutter`, with **no dependency on `a2ui_agent`**:
+    1. **Concrete Component Type (`ComponentImplementation`)**: Subclasses `a2ui_core`'s `ComponentApi`, attaching a `ComponentWidgetBuilder` (`Widget Function(BuildContext, ComponentNode, ComponentProps, ChildWidgetBuilder)`) to each component's JSON Schema.
+    2. **Flutter Basic Catalog (`basicCatalog()`)**: Returns a `CatalogImplementation` (`Catalog<ComponentImplementation, FunctionImplementation>`) implementing all 18 A2UI v1.0 basic components (`Card`, `Row`, `Column`, `List`, `Tabs`, `Modal`, `Text`, `Image`, `Icon`, `Video`, `AudioPlayer`, `Divider`, `Button`, `TextField`, `CheckBox`, `ChoicePicker`, `Slider`, `DateTimeInput`).
+    3. **Reactive Surface Widget (`A2uiSurface`)**: Takes a `SurfaceModel<ComponentImplementation>`, attaches a `NodeResolver<ComponentImplementation>`, and rebuilds only affected widget subtrees via `SignalState` as signals change.
+- **`S30` — Seamlines 1 & 2: Catalog Type Erasure & Stream Processing** (`layout: skill-breakdown`, `way: 1`)
+  - **Seamline 1: `ComponentApi` $\leftrightarrow$ `ComponentImplementation` (`a2ui_core` $\leftrightarrow$ `a2ui_flutter` & `a2ui_agent`)**
+    - `a2ui_core` is generic over `T extends ComponentApi`.
+    - `a2ui_flutter` provides `basicCatalog()` (`Catalog<ComponentImplementation, FunctionImplementation>`).
+    - `a2ui_agent`'s `CatalogConfig.fromCatalog(a2uiCatalog)` erases the Flutter widget builder down to `ComponentApi` JSON Schemas so prompt generation never imports Flutter.
+  - **Seamline 2: `A2uiRequestProcessor` $\leftrightarrow$ `MessageProcessor<T>` (`a2ui_agent` $\leftrightarrow$ `a2ui_core`)**
+    - `A2uiRequestProcessor` converts raw LLM text chunks (`<a2ui-json>`) $\rightarrow$ `List<AgentToRendererMessage>`.
+    - `MessageProcessor<T>` consumes `List<AgentToRendererMessage>` $\rightarrow$ mutates `SurfaceGroupModel<T>` / `SurfaceModel<T>`.
+    - Can run across a network wire (Server $\rightarrow$ Client) or fused in-process via `RendererState.of(renderer)` and `StreamedAnswer<ComponentImplementation>` (`AnswerTextPart`, `AnswerSurfacePart`, `AnswerErrorPart`).
+- **`S31` — Seamlines 3 & 4: Reactive Surface Mounting & Two-Way Actions** (`layout: skill-breakdown`, `way: 2`)
+  - **Seamline 3: `SurfaceModel<ComponentImplementation>` $\leftrightarrow$ `A2uiSurface` (`a2ui_core` $\leftrightarrow$ `a2ui_flutter`)**
+    - `MessageProcessor<ComponentImplementation>` (or `AnswerSurfacePart.surface`) produces a `SurfaceModel<ComponentImplementation>` passed directly to `A2uiSurface(key: ObjectKey(surface), surface: surface)`, wrapped in `A2uiMarkdown` for rich text.
+  - **Seamline 4: `onAction` & `outboundListener` $\leftrightarrow$ `ActionMessage` + `getRendererDataModel` (`a2ui_flutter` $\rightarrow$ `a2ui_core` $\rightarrow$ `a2ui_agent`)**
+    1. *Local Data Bindings (`WritableBinding`)*: Editing `TextField`, `CheckBox`, or `Slider` bound to `{"@path": "/..."}` mutates `SurfaceModel.dataModel` in-place in `a2ui_core` without round-tripping to the agent.
+    2. *Agent Actions (`NodeAction`)*: Pressing a `Button` resolves `action.event.context` against `SurfaceModel.dataModel` and emits `A2uiRendererAction` on `renderer.model.onAction`.
+    3. *Outbound Turn*: Wrapped in `a2ui_core`'s `ActionMessage` + `renderer.getRendererDataModel(version: A2uiProtocolVersion.v1_0)` (plus `outboundListener` for `RendererFunctionResponseMessage` / `CallAgentFunctionMessage`) and sent back to the agent.
+- **`S32` — When to Use Each Package: 4 Architecture Topologies** (`layout: default`)
+  - Clean breakdown of the 4 deployment patterns surfaced by `agy`:
+    1. **Full-Stack / Local Agent Flutter App (`agy_genui_demo`)** — `a2ui_core` + `a2ui_agent` + `a2ui_flutter`: App both prompts/streams from the LLM (`StreamedAnswer`) and renders interactive `A2uiSurface` widgets over shared `SurfaceModel` state.
+    2. **Thin Flutter Client + Remote Backend Agent** — `a2ui_core` + `a2ui_flutter` (No `a2ui_agent` on client): Backend server parses LLM output and streams `AgentToRendererMessage`s over WebSockets/SSE/gRPC directly into the client's `MessageProcessor<ComponentImplementation>`.
+    3. **Dart Backend Agent Server / CLI (`shelf`, `dart_frog`, CLI)** — `a2ui_core` + `a2ui_agent` (No `a2ui_flutter`): Pure Dart server cannot depend on `flutter`; uses `BasicCatalog.v1_0()` + `A2uiRequestProcessor` + `RendererState` to prompt the LLM, heal/validate `<a2ui-json>`, and forward messages to clients.
+    4. **Custom Non-Flutter Dart Renderer / Headless Testing** — `a2ui_core` (+ optional `a2ui_agent`): Subclass `ComponentApi` and mount `NodeResolver<MyComponent>` to target Jaspr, terminal UI, or headless unit tests.
+
+#### Deep Dive Part B: Options `agy` Suggested for Utilizing A2UI (Multiple Slides)
+
+- **`S33` — Lead-in: Prompt 4.3 (Explore Capabilities for This Codebase)** (`layout: skill-breakdown`, `way: 3`)
   - **Prompt 4.3**:
     ```text
     Give me some options for utilising this capability in the current codebase
     ```
-- **`S29` — Cast Clip 4.3: Brainstorming 6 A2UI Enhancements** (`layout: cast-full`)
+- **`S34` — Cast Clip 4.3: Brainstorming 6 A2UI Enhancements** (`layout: cast-full`)
   - `cast: /casts/04c-act4-a2ui-options.cast`
-- **`S30` — Lead-in: Prompt 4.4 & 4.5 (Clarifying Parameter Forms & Bidirectional RPCs)** (`layout: skill-breakdown`, `way: mashup`)
+- **`S35` — `agy`'s Suggestions (1 of 3): Action Loops & Custom Developer Catalog** (`layout: default`)
+  - **Option 1: Live Two-Way Action Loop (`Button` $\rightarrow$ Agent Turn + `a2uiRendererDataModel` Sync)**
+    - Automatically dispatch `ActionMessage` + `a2uiRendererDataModel` to the thread's Antigravity `Agent` when a user clicks an `A2uiSurface` `Button`.
+    - Show a compact user "Action Pill" in the chat feed (e.g., `⚡ Action: book_flight (destination: Kyoto)`) and let the agent mutate the existing surface in-place via `updateDataModel` / `updateComponents` or stream a follow-up surface.
+    - Attach `renderer.getRendererDataModel(version: A2uiProtocolVersion.v1_0)` to regular text prompts when active surfaces have `sendDataModel: true`.
+  - **Option 2: Custom Workspace & Developer Catalog (`CatalogImplementation` Extensions)**
+    - Pair custom JSON Schemas with Flutter `ComponentWidgetBuilder`s tailored to an Antigravity coding assistant:
+      - `CodeDiffCard`: Side-by-side or unified diff preview with **Apply Patch** / **Discard** action buttons.
+      - `FileTreeCard` / `WorkspaceFileCard`: Clickable file badges (`path`, `lineStart`, `lineEnd`, `summary`) for files in `ChatProject.workingDirectory`.
+      - `CommandRunnerCard`: Proposes a shell command with editable flags (`TextField` / `CheckBox` bound to data model) and a **Run in Workspace** button.
+- **`S36` — `agy`'s Suggestions (2 of 3): Persistent Canvas & Self-Healing Validation** (`layout: default`)
+  - **Option 3: Persistent Split-Pane "Surface Canvas" Drawer (Alongside Inline Chat Surfaces)**
+    - `RendererState` supports two UX modes over the same `MessageProcessor`: inline chat turns and a persistent canvas where multi-turn prompts iteratively evolve a single surface.
+    - Add a toggleable right-hand **A2UI Inspector / Canvas** pane in `ChatScreen` and `TopToolbar`.
+    - Pin any active surface from `renderer.model.allSurfaces` with a live **Data Model JSON Inspector** (`surface.dataModel`) and **Component Tree Viewer** to watch `@path` bindings mutate in real time.
+  - **Option 4: Self-Healing Validation Loop (Automatic LLM Repair on `AnswerErrorPart`)**
+    - When the LLM emits a malformed `<a2ui-json>` block or violates a component schema, `StreamedAnswer` rolls back that block and `MessageBubble` displays `_InlineA2uiErrorBanner`.
+    - Add a **Fix Surface** button on `_InlineA2uiErrorBanner` (or an automatic 1-retry self-repair option in `ChatViewModel`) that sends `ErrorMessage(version: '1.0', error: ...)` back to the thread's Antigravity session so the agent repairs the surface automatically.
+- **`S37` — `agy`'s Suggestions (3 of 3): Clarification Forms, Express DSL & Bidirectional RPCs** (`layout: default`)
+  - **Option 5: Agent-Driven Clarification Forms ("Ask Question" Surface Pattern)**
+    - Instead of asking plain-text clarifying questions before writing code or running tools, the agent streams an interactive A2UI v1.0 parameter form (`ChoicePicker` chips/checkboxes, `TextField` with validation `checks`, `CheckBox`, `Slider`, and a validation-gated `Submit` `Button`).
+    - Submitting the form sends the resolved JSON context + data model straight back to the agent.
+  - **Option 6: A2UI Express Format Toggle (`DirectJsonFormatFactory` vs. `ExpressFormatFactory`) & Bidirectional RPCs (`FunctionImplementation`)**
+    - Switch between `<a2ui-json>` (`DirectJsonFormatFactory`) and the compact token-saving `<a2ui-express>` DSL (`ExpressFormatFactory`) over the exact same `StreamedAnswer` and `MessageProcessor` pipeline.
+    - Register custom `FunctionImplementation`s (`AllowedCallers.rendererOrAgent`) so the agent and renderer can invoke functions (`callRendererFunction` / `callAgentFunction`) across the wire.
+
+#### Implementing Our Chosen Options (`4.4` & `4.5`)
+
+- **`S38` — Lead-in: Prompt 4.4 & 4.5 (Clarifying Parameter Forms & Bidirectional RPCs)** (`layout: skill-breakdown`, `way: mashup`)
   - **Prompt 4.4 & 4.5**:
     ```text
     Please implement:
@@ -206,10 +277,10 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
     - Bidirectional Renderer RPC Functions (`FunctionImplementation`)
     ```
     Followed by: `git commit and tag as step-04-a2ui` and `/clear`.
-- **`S31` — Cast Clip 4.4: Implementing Parameter Forms & Custom `FunctionImplementation`s** (`layout: cast-full`)
+- **`S39` — Cast Clip 4.4: Implementing Parameter Forms & Custom `FunctionImplementation`s** (`layout: cast-full`)
   - `cast: /casts/04d-act4-forms-and-rpcs.cast`
   - **Talking Points**: `getWorkspaceInfo`, `listWorkspaceFiles`, `setSurfaceData`, and `formatParameterSummary` registered with `AllowedCallers.rendererOrAgent`.
-- **`S32` — Screenshot & Live Demo: `step-04-a2ui`** (`layout: hardware-callout`)
+- **`S40` — Screenshot & Live Demo: `step-04-a2ui`** (`layout: hardware-callout`)
   - `image: /images/step-04-a2ui.png`
   - **Live Demo Transition**:
     ```bash
@@ -222,30 +293,30 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
 
 ### Act 5: Codebase Review, Hardening Fixups & Finale (`slides/acts/06-act5-fixup.md`)
 
-- **`S33` — Section Divider: Act 5 — Codebase Audit & Hardening Fixups** (`layout: center`)
+- **`S41` — Section Divider: Act 5 — Codebase Audit & Hardening Fixups** (`layout: center`)
   - `forwardSurfaceActionsToAgent` · RPC Batching · `step-05-fixup`
-- **`S34` — Lead-in: Prompt 5.1 (Fresh-Session Codebase Audit)** (`layout: skill-breakdown`, `way: 1`)
+- **`S42` — Lead-in: Prompt 5.1 (Fresh-Session Codebase Audit)** (`layout: skill-breakdown`, `way: 1`)
   - **Prompt 5.1**:
     ```text
     please review this codebase
     ```
-- **`S35` — Cast Clip 5.1: Auditing the Full Codebase** (`layout: cast-full`)
+- **`S43` — Cast Clip 5.1: Auditing the Full Codebase** (`layout: cast-full`)
   - `cast: /casts/05a-act5-codebase-audit.cast`
-- **`S36` — 5 Issues Surfaced by the Fresh-Context Audit** (`layout: default`)
+- **`S44` — 5 Issues Surfaced by the Fresh-Context Audit** (`layout: default`)
   1. **`forwardSurfaceActionsToAgent` & `forwardRpcMessagesToAgent` defaulted to `false` in `main.dart`**: Surface button clicks in the live desktop app recorded locally without forwarding to `localharness`!
   2. **Stream Self-Cancellation on Multi-RPC Turns**: Synchronous `sendRpcMessageToAgent` mid-stream cancelled the active stream when multiple `callRendererFunction` calls fired in one block.
   3. **Auto-Titling Overwrote Custom Thread Titles on First Message**.
   4. **Sandbox-Escape Path Heuristics Edge Cases**: `--flag=/outside/path`, `$HOME` expansion, trailing `/..`, and false-positive `awk '/pattern/'`.
   5. **Unbounded Synchronous `listSync()` in `ListWorkspaceFilesFunction`**.
-- **`S37` — Lead-in: Prompt 5.2 & 5.3 (Fix Surfaced Issues & Tag `step-05-fixup`)** (`layout: skill-breakdown`, `way: 3`)
+- **`S45` — Lead-in: Prompt 5.2 & 5.3 (Fix Surfaced Issues & Tag `step-05-fixup`)** (`layout: skill-breakdown`, `way: 3`)
   - **Prompt 5.2 & 5.3**:
     ```text
     please fix issues
     ```
     Followed by: `git commit and tag as step-05-fixup`.
-- **`S38` — Cast Clip 5.2: Fixing All 5 Issues & Tagging `step-05-fixup`** (`layout: cast-full`)
+- **`S46` — Cast Clip 5.2: Fixing All 5 Issues & Tagging `step-05-fixup`** (`layout: cast-full`)
   - `cast: /casts/05b-act5-fixups-and-tag.cast`
-- **`S39` — Screenshot & Live Finale Demo: `step-05-fixup`** (`layout: hardware-callout`)
+- **`S47` — Screenshot & Live Finale Demo: `step-05-fixup`** (`layout: hardware-callout`)
   - `image: /images/step-05-fixup.png`
   - **Live Demo Transition**:
     ```bash
@@ -255,7 +326,7 @@ In this presentation we will find out that Flutter and GenUI, a framework for ha
   - **What to Show Live**:
     1. Ask `Please ask a multiple choice question` $\rightarrow$ streams an interactive A2UI v1.0 Trivia card $\rightarrow$ pick **Java** and click **Submit Answer** $\rightarrow$ automatic two-way `ActionMessage` + `a2uiRendererDataModel` round-trip back to `localharness`!
     2. Ask `Please review this codebase` $\rightarrow$ runs `ls`/`find` inside the `exebox` sandbox and streams back a custom **Codebase Review Clarifying Parameter Form**.
-- **`S40` — Takeaways & Resources** (`layout: default`)
+- **`S48` — Takeaways & Resources** (`layout: default`)
   - Using `/clear` + Git tags at each milestone keeps context sharp and makes live-demo time travel effortless (`git checkout <tag> -- lib test` + Hot Restart).
   - Asking `agy` to review its own codebase in a fresh session (`Act 3.1` and `Act 5.1`) caught critical integration bugs before going on stage.
   - Links to repo, `CODELAB.md`, `prompts/` session transcripts, and A2UI / Antigravity SDK docs.
