@@ -55,15 +55,15 @@ Before starting any slide-authoring task, read:
 
 ## Task 3: Author Act 0, Act 1 & Act 2 Slides (`01-primer.md`, `02-act1-markdown-chat.md`, `03-act2-antigravity-sdk.md`)
 
-- [ ] Author `slides/acts/01-primer.md` (`S01`, `S01a`, `S02`, `S03`) per [`PRESENTATION.md`](PRESENTATION.md#L103-L140):
+- [x] Author `slides/acts/01-primer.md` (`S01`, `S01a`, `S02`, `S03`) per [`PRESENTATION.md`](PRESENTATION.md#L103-L140):
   - Include the Mermaid milestone & context compaction flowchart on `S03` and full GitHub URLs (`https://github.com/domesticmouse/agy_genui_demo/blob/main/prompts/...`) for the session transcripts.
-- [ ] Author `slides/acts/02-act1-markdown-chat.md` (`S04`, `S05a`, `S05b`, `S05c`, `S06`, `S06a`, `S06b`, `S07`) per [`PRESENTATION.md`](PRESENTATION.md#L142-L196):
+- [x] Author `slides/acts/02-act1-markdown-chat.md` (`S04`, `S05a`, `S05b`, `S05c`, `S06`, `S06a`, `S06b`, `S07`) per [`PRESENTATION.md`](PRESENTATION.md#L142-L196):
   - Separate slides for scaffold commands (`S05a`), Prompt 1.1 (`S05b`), Prompt 1.2 (`S05c`), and `/plugin` (`S06a`), with line-by-line `v-click` animations.
   - Embed `/casts/01-act1-markdown-chat.cast` (`S06`) and `/casts/01b-act1-plugins.cast` (`S06b`).
   - Configure `S07` (`layout: hardware-callout`, `image: /images/step-01-markdown-chat.png`) with the `step-01-markdown-chat` hot-restart command.
-- [ ] Author `slides/acts/03-act2-antigravity-sdk.md` (`S08`, `S09a`, `S09b`, `S10`, `S11`) per [`PRESENTATION.md`](PRESENTATION.md#L198-L226):
+- [x] Author `slides/acts/03-act2-antigravity-sdk.md` (`S08`, `S09a`, `S09b`, `S10`, `S11`) per [`PRESENTATION.md`](PRESENTATION.md#L198-L226):
   - Separate `v-click` prompt slides (`S09a`, `S09b`), `/casts/02-act2-antigravity-sdk.cast` (`S10`), and `S11` (`layout: hardware-callout`, `image: /images/step-02-antigravity-sdk.png`).
-- [ ] **Completion Criterion**: Every slide has `<!-- Sxx -->` ID comments, Australian English spelling, conversational speaker notes (`<!-- ... -->`), HTML/Unicode arrows (`&rarr;` / `→`) instead of raw LaTeX inside HTML blocks, and `npm --prefix slides run build` succeeds.
+- [x] **Completion Criterion**: Every slide has `<!-- Sxx -->` ID comments, Australian English spelling, conversational speaker notes (`<!-- ... -->`), HTML/Unicode arrows (`&rarr;` / `→`) instead of raw LaTeX inside HTML blocks, and `npm --prefix slides run build` succeeds.
 
 ---
 
