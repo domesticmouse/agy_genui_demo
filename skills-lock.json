@@ -1,29 +1,35 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "agy-brain-explorer": {
       "source": "domesticmouse/skills",
       "sourceType": "github",
       "skillPath": "skills/agy-brain-explorer/SKILL.md",
-      "computedHash": "d742209a1ea4e21a9e8d1e6167febf156210d9c845dd0402101ea9f98d38b6f8"
+      "computedHash": "8cf74199c3b7b9c64bc1b0009e1d9aa8c1f7fdb36a0a505e95fa15e18ad0dbe8"
     },
     "asciinema": {
       "source": "domesticmouse/skills",
       "sourceType": "github",
       "skillPath": "skills/asciinema/SKILL.md",
-      "computedHash": "c6614fcf7d997bc80890d6240fd8a87bd35643aff1c7e32e16c135604a3d6d1a"
+      "computedHash": ""
+    },
+    "bjm-voice": {
+      "source": "domesticmouse/skills",
+      "sourceType": "github",
+      "skillPath": "skills/bjm-voice/SKILL.md",
+      "computedHash": "3d92c0a0ece351b393f218ff347d40b97a8f01c704399071980119a020caedaa"
     },
     "cast-player-html": {
       "source": "domesticmouse/skills",
       "sourceType": "github",
       "skillPath": "skills/cast-player-html/SKILL.md",
-      "computedHash": "659935a3cd06cb5b83de02c184d47f03f3c705c81147152d0826f484f54e0da3"
+      "computedHash": ""
     },
     "slidev-deck": {
       "source": "domesticmouse/skills",
       "sourceType": "github",
       "skillPath": "skills/slidev-deck/SKILL.md",
-      "computedHash": "2b792cf46f43632418864cdb29ff63629cd5ee1103532406ff9b83a2314f4ead"
+      "computedHash": ""
     }
   }
 }
