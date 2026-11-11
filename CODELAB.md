@@ -1,11 +1,11 @@
-# Interactive Workshop: Building a macOS Agentic Markdown & A2UI Chat App with Flutter, Antigravity Desktop & EGM
+# Interactive Workshop: Building an Agentic Markdown & A2UI Chat App with Flutter, Antigravity & EGM
 
 Welcome! In this hands-on codelab, you will build **`flutter_agy_a2ui_chat`** from scratch using **Google Antigravity Desktop** (Antigravity 2.0), the **Antigravity Dart SDK** (`package:antigravity`), and the **Agent-to-UI (A2UI v1.0)** stack (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`).
 
 Rather than treating AI coding as a one-shot prompt lottery, we are going to practise **Spec-Driven Development (SDD)** using the **Elephant-Goldfish Model (EGM)** plugin and Antigravity Desktop's native **Git worktree** support:
 
 - **Plugins First (`/plugin`)**: Before writing a line of Dart, we will equip our agent with the official **Dart and Flutter** plugin and the **Elephant-Goldfish Model (EGM)** plugin.
-- **Stop & Play After Every Act**: Automated `flutter test` and `dart analyze` checks catch layout overflows and type errors, but they cannot tell you how an app *feels* on macOS. After every act, you will stop, run the desktop app, and work through a human verification checklist of behaviours that unit tests cannot easily cover.
+- **Stop & Play After Every Act**: Automated `flutter test` and `dart analyze` checks catch layout overflows and type errors, but they cannot tell you how an app *feels* in a live window. After every act, you will stop, run the desktop app, and work through a human verification checklist of behaviours that unit tests cannot easily cover.
 - **Document Baseline, Then Build via EGM Worktree PRs**: After building the initial app in Act 1, we will run `/egm-bootstrap` to generate a hierarchy of architectural `README.md` contracts. Every subsequent feature act (Acts 2–4) will run in an isolated **Antigravity Git worktree**, following the full EGM loop (`/egm-brainstorm` → `/egm-draft` → `/egm-review` → `/egm-resolve` → Implement → GitHub Pull Request).
 - **Close the Loop with `/egm-drift-report` (Act 5)**: Finally, we will audit our specifications and `README.md` contracts against the finished codebase to catch and resolve implementation drift.
 
@@ -30,22 +30,22 @@ flowchart LR
 
 ### 0.1 — Prerequisites
 
-Ensure you have the following installed and authenticated on your Mac:
-- **Flutter SDK** (3.24+ with macOS desktop support enabled; verify with `flutter doctor`)
-- **Xcode** & CocoaPods (for compiling the macOS desktop runner)
+Ensure you have the following installed and authenticated on your machine (Linux, macOS, or Windows — anywhere the Antigravity SDK runs):
+- **Flutter SDK** (3.24+ with desktop support enabled for your OS; verify with `flutter doctor`)
+- **Native Desktop Toolchain** for your platform (Clang/GTK3 on Linux, Xcode on macOS, or Visual Studio C++ desktop workload on Windows)
 - **GitHub CLI (`gh`)** authenticated via `gh auth login` (so Antigravity can push worktree branches and open GitHub Pull Requests)
 - **Google Antigravity Desktop** (Antigravity 2.0)
 
 ### 0.2 — Scaffold the Project & GitHub Repository
 
-In your terminal, create a brand-new macOS Flutter project, make the initial commit, and push it to a new GitHub repository so that your worktrees have an `origin` remote to open Pull Requests against:
+In your terminal, create a brand-new desktop Flutter project, make the initial commit, and push it to a new GitHub repository so that your worktrees have an `origin` remote to open Pull Requests against:
 
 ```bash
-flutter create flutter_agy_a2ui_chat --platforms=macos
+flutter create flutter_agy_a2ui_chat --platforms=linux,macos,windows
 cd flutter_agy_a2ui_chat
 git init -b main
 git add .
-git commit -m "Initial commit: Flutter macOS scaffold"
+git commit -m "Initial commit: Flutter desktop scaffold"
 git tag step-00-scaffold
 
 # Create a private or public GitHub repo and push main:
@@ -82,21 +82,21 @@ Take two minutes to expand both plugins in the Customizations panel and inspect 
 
 ---
 
-## Act 1: Build the Initial macOS Markdown Chat UI & Bootstrap EGM (`step-01-markdown-chat`)
+## Act 1: Build the Initial Desktop Markdown Chat UI & Bootstrap EGM (`step-01-markdown-chat`)
 
-For Act 1, we will work directly on `main` (in **Local Mode**) to replace the default Flutter counter app with a rich macOS split-view Markdown chat interface powered by `flutter_markdown_plus`.
+For Act 1, we will work directly on `main` (in **Local Mode**) to replace the default Flutter counter app with a rich desktop split-view Markdown chat interface powered by `flutter_markdown_plus`.
 
 ### 1.1 — Prompt: Build the Markdown Chat App
 
 Start a new conversation in **Local Mode** and send the following prompt:
 
 ```text
-Please build a macOS desktop Markdown chat application in this project using `flutter_markdown_plus` with the following features:
-1. A collapsible macOS split-view conversation thread sidebar with per-thread typing state, automatic thread titling, and starter threads showcasing rich Markdown.
+Please build a desktop Markdown chat application in this project using `flutter_markdown_plus` with the following features:
+1. A collapsible split-view conversation thread sidebar with per-thread typing state, automatic thread titling, and starter threads showcasing rich Markdown.
 2. Markdown message rendering (headings, bold/italic/strikethrough, inline and fenced code blocks, blockquotes, lists, and GitHub-style tables) with a one-click Copy Markdown button on every message bubble.
 3. A Markdown composer that restores focus after sending, with a formatting toolbar (Bold, Italic, Inline Code, Code Block, List, Blockquote), a live Markdown preview toggle, and desktop keyboard shortcuts (`Enter` or `Numpad Enter` to send, `Shift + Enter` for a newline with an IME composition guard).
 4. A responsive top toolbar with Light and Dark Material 3 theme switching.
-5. Widget tests in `test/widget_test.dart` and macOS build/run instructions in `README.md`.
+5. Widget tests in `test/widget_test.dart` and desktop build/run instructions in `README.md`.
 ```
 
 #### What to Watch While Antigravity Builds Act 1
@@ -111,21 +111,21 @@ Please build a macOS desktop Markdown chat application in this project using `fl
 
 ### 1.2 — Stop & Play: Act 1 Human Verification Checklist
 
-Launch the macOS desktop app from a terminal in your project root (and leave this terminal running throughout the workshop so you can hot-restart with `R`):
+Launch the desktop app from a terminal in your project root (and leave this terminal running throughout the workshop so you can hot-restart with `R`):
 
 ```bash
-flutter run -d macos
+flutter run
 ```
 
 Automated widget tests verify that widgets mount and callbacks fire, but they use a synthetic renderer and mocked clipboard/keyboard channels. **Test these real-world desktop behaviours yourself:**
 
-- [ ] **Window Resizing & Split-View Geometry**: Drag the macOS window edge from narrow (~650px) to wide (~1600px) and toggle the sidebar collapse button in the top toolbar. Verify the 280px sidebar transitions smoothly without text clipping or layout jumps in the message list.
+- [ ] **Window Resizing & Split-View Geometry**: Drag the desktop window edge from narrow (~650px) to wide (~1600px) and toggle the sidebar collapse button in the top toolbar. Verify the 280px sidebar transitions smoothly without text clipping or layout jumps in the message list.
 - [ ] **GitHub-Flavored Markdown Visual Fidelity (Light vs. Dark)**: Open the **Markdown Showcase** starter thread and toggle between **Light** and **Dark** Material 3 themes. Visually inspect table cell borders, inline `code` pill contrast, blockquote left borders, and fenced code block backgrounds in both colour schemes.
-- [ ] **Real macOS System Clipboard (`Copy Markdown`)**: Hover or click the **Copy Markdown** icon on a message bubble, verify the icon changes to a checkmark, and press `Cmd+V` inside the composer (or TextEdit) to confirm the raw Markdown source actually lands on the macOS system pasteboard.
-- [ ] **Physical Keyboard Shortcuts & macOS IME Composition Guard**:
+- [ ] **Real System Clipboard (`Copy Markdown`)**: Hover or click the **Copy Markdown** icon on a message bubble, verify the icon changes to a checkmark, and paste (`Ctrl+V` / `Cmd+V`) inside the composer or a text editor to confirm the raw Markdown source actually lands on your OS clipboard.
+- [ ] **Physical Keyboard Shortcuts & IME Composition Guard**:
   - Type a line in the composer, press **`Shift+Enter`**, and confirm it inserts a newline rather than sending.
   - Press **`Enter`** (and **`Numpad Enter`** if you have a full keyboard) to confirm it sends the message and **immediately restores keyboard focus** to the composer so you can keep typing without clicking the mouse.
-  - Press a macOS dead-key sequence such as **`Option+e`** followed by **`e`** (to compose `é`) and press `Enter` while the underline composition state is active—confirm the IME composition guard prevents premature sending.
+  - If you use an IME or dead-key compose sequence (e.g., composing accented or CJK characters), press `Enter` while the active composition underline is visible and confirm the IME composition guard prevents premature sending.
 - [ ] **Formatting Toolbar Cursor Wrapping**: Highlight a word in the composer and click **Bold** (`**text**`) or **Code Block**, then toggle **Live Preview** to see the side-by-side rendered preview update as you type.
 - [ ] **Independent Per-Thread Typing Timers**: Create two new threads, send a message in Thread A, and immediately switch to Thread B before the simulated reply arrives. Verify the typing indicator stays scoped to Thread A in the sidebar and doesn't bleed into Thread B's message list.
 
@@ -182,19 +182,19 @@ From this point forward, **we will not code directly on `main`**. Every new feat
 
 ## Act 2: Integrate the Antigravity Dart SDK (`step-02-antigravity-sdk`)
 
-In Act 2, we replace the simulated canned replies with live streaming responses from the **Google Antigravity Dart SDK** (`package:antigravity`), which spawns the local Antigravity harness binary (`~/.antigravity/bin/localharness`).
+In Act 2, we replace the simulated canned replies with live streaming responses from the **Google Antigravity Dart SDK** (`package:antigravity`), which spawns the local Antigravity harness binary (`localharness`).
 
 ### 2.1 — Start a New Worktree & Run `/egm-brainstorm`
 
 Click **New Conversation**, select **New worktree**, and start brainstorming:
 
 ```text
-/egm-brainstorm Replace the simulated canned assistant replies with live streaming responses from `package:antigravity`. We need to configure macOS entitlements so the desktop app can spawn the local harness binary, stream responses incrementally per thread with cancellation support, and keep `flutter test` fast and deterministic without spawning real OS processes in widget tests.
+/egm-brainstorm Replace the simulated canned assistant replies with live streaming responses from `package:antigravity`. Ensure any platform runner permissions needed to spawn the local harness binary and connect over localhost are configured, stream responses incrementally per thread with cancellation support, and keep `flutter test` fast and deterministic without spawning real OS processes in widget tests.
 ```
 
 #### Key Questions & Trade-offs to Discuss with the Elephant
 As the Elephant drills into the problem and inspects `package:antigravity` (and the bootstrapped `README.md` files from Act 1), guide the discussion around these three real-world constraints:
-1. **macOS App Sandbox vs. `localharness` Spawning**: `package:antigravity`'s `LocalConnectionStrategy` spawns `~/.antigravity/bin/localharness` via `Process.start`, reads `~/.antigravity` and environment variables (`GEMINI_API_KEY`), and opens a local loopback WebSocket plus outbound HTTPS connections. In `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`, `com.apple.security.app-sandbox` must be set to `false` with `network.client` and `network.server` enabled.
+1. **Desktop Subprocess & Loopback Socket Permissions**: `package:antigravity`'s `LocalConnectionStrategy` spawns the `localharness` binary via `Process.start`, reads `~/.antigravity` and environment variables (`GEMINI_API_KEY`), and opens a local loopback WebSocket plus outbound HTTPS connections. Linux and Windows desktop builds allow child processes and loopback sockets by default, whereas macOS enables an App Sandbox in `macos/Runner/*.entitlements` that must have `com.apple.security.app-sandbox` set to `false` (and `network.client` / `network.server` set to `true`) so `Process.start` is permitted.
 2. **The `FakeAsync` Widget Test Trap**: Inside `package:antigravity`, `ChatResponse.chunks` polls internally using `await Future.delayed(const Duration(milliseconds: 5))` in a `while` loop, and `Agent.start()` spawns a real child process. Either of those will hang Flutter's `FakeAsync` widget test zone forever! We need a clean `AntigravityAgentSession` interface (`start()`, `sendPrompt()`, `stop()`) with a production `LocalAntigravityAgentSession` and an injectable `AntigravitySessionBuilder` factory for deterministic widget tests.
 3. **Per-Thread Streaming & Stale-Chunk Guards**: Users can switch threads or delete a thread mid-stream. `ChatViewModel` needs per-thread active request IDs so cancelled turns never append ghost tokens.
 
@@ -230,7 +230,7 @@ Once your specification in `docs/designs/antigravity_sdk_backend.md` is approved
 
 ```text
 Please implement the approved specification in `docs/designs/antigravity_sdk_backend.md`:
-1. Add `antigravity` to `pubspec.yaml` and update `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`.
+1. Add `antigravity` to `pubspec.yaml` and update any platform runner entitlements/configs needed to spawn `localharness`.
 2. Implement `AntigravityAgentSession` and `LocalAntigravityAgentSession` in `lib/data/repositories/chat_repository.dart` and wire per-thread streaming and error formatting into `ChatViewModel`.
 3. Update `test/widget_test.dart` and affected directory `README.md` contracts, and verify `dart format . && dart analyze && flutter test` pass.
 4. Commit the design doc and implementation to this worktree branch, push to origin, and create a GitHub Pull Request with `gh pr create`.
@@ -247,37 +247,36 @@ git tag step-02-antigravity-sdk
 
 ### 2.5 — Stop & Play: Act 2 Human Verification Checklist
 
-> [!WARNING]
-> **Full Rebuild Required Once for macOS Entitlements!**
-> Because Act 2 modified `macos/Runner/DebugProfile.entitlements`, pressing `R` (Hot Restart) is not enough—macOS code-signs entitlements at compile time. Stop `flutter run` with **`q`** and run `flutter run -d macos` fresh so Xcode re-signs the `.app` bundle.
+> [!NOTE]
+> Because Act 2 adds a new package dependency (and updates native runner entitlements if you are on macOS), stop your running `flutter run` process with **`q`**, run `flutter pub get`, and start `flutter run` fresh once.
 
 Once the app launches, work through this human verification checklist:
 
 - [ ] **Live Token-by-Token Streaming Cadence**: Create a new thread (`+`) and send: *"Explain in 3 short paragraphs why Dart's isolate model is great for desktop UIs."* Watch the assistant bubble grow token-by-token as `localharness` streams chunks over the loopback WebSocket, verifying smooth scroll tracking without layout jitter.
 - [ ] **Multi-Turn Session Memory Within a Thread**: Send a follow-up prompt in the *same* thread: *"Now summarise your second point in one haiku."* Confirm the agent remembers the previous turn's context because `ChatRepository` reuses the thread's `AntigravityAgentSession`.
 - [ ] **Cross-Thread Context Isolation**: Click `+` to create a second thread and ask: *"What did we just talk about?"* Confirm the new thread starts a fresh `Agent` session with zero memory of the first thread.
-- [ ] **Background Streaming While Switching Threads**: Ask a long question in Thread 1 (*"Write a comprehensive comparison of Material 3 vs Cupertino widgets with a Markdown table"*), immediately click over to Thread 2 while Thread 1 is still streaming, watch Thread 1's typing badge animate in the sidebar, and switch back to confirm the streamed Markdown table completed cleanly.
+- [ ] **Background Streaming While Switching Threads**: Ask a long question in Thread 1 (*"Write a comprehensive comparison of state management approaches with a Markdown table"*), immediately click over to Thread 2 while Thread 1 is still streaming, watch Thread 1's typing badge animate in the sidebar, and switch back to confirm the streamed Markdown table completed cleanly.
 - [ ] **Mid-Stream Thread Deletion (`stop()`)**: Start a long streaming response in a throwaway thread and click the trash icon to delete that thread mid-stream. Verify the app does not throw an unhandled exception or leak tokens into the newly selected thread.
 
 ---
 
 ## Act 3: Project Workspaces (`CWD`) & Sandbox Escape Review UI (`step-03-projects-sandbox`)
 
-In Act 3, we uncover a classic macOS desktop pitfall—what working directory `localharness` inherits when launched from Finder vs. the terminal—and use the EGM workflow to design and build **Project Workspaces (`CWD`)** and a human-in-the-loop **Sandbox Escape Review** gate.
+In Act 3, we uncover a classic desktop application pitfall—what working directory `localharness` inherits when launched from an OS application launcher vs. a developer terminal—and use the EGM workflow to design and build **Project Workspaces (`CWD`)** and a human-in-the-loop **Sandbox Escape Review** gate.
 
 ### 3.1 — Start a New Worktree & Investigate the `CWD` Trap
 
 Click **New Conversation**, switch to **New worktree**, and start with an investigative prompt before launching `/egm-brainstorm`:
 
 ```text
-Please review this program and `package:antigravity`. Which directory does the Antigravity local harness use as its initial working directory when launched from `flutter run` versus when launched as a macOS `.app` bundle from Finder? Also note any other state isolation issues you spot in the current chat UI.
+Please review this program and `package:antigravity`. Which directory does the Antigravity local harness use as its initial working directory when launched from `flutter run` in a terminal versus when launched from an OS desktop launcher? Also note any other state isolation issues you spot in the current chat UI.
 ```
 
 #### What the Agent Discovers
-1. **The macOS Finder `/` Root Trap**:
+1. **The Implicit `Directory.current` Trap**:
    - `ChatRepository.buildAgentConfig` passes `workspaces: null` to `LocalAgentConfig`, which defaults to `[Directory.current.absolute.path]`.
-   - When launched via `flutter run -d macos`, `Directory.current` is your project folder.
-   - However, when a macOS `.app` bundle is double-clicked in Finder or the Dock, `launchd` sets the process working directory to **`/`** (the filesystem root)—dangerously exposing `/` as the agent's workspace!
+   - When launched via `flutter run` in a terminal, `Directory.current` happens to be your project folder.
+   - However, when a compiled desktop binary is launched from an OS GUI launcher (desktop shortcut, application menu, Finder, or Explorer), the OS sets the process working directory to **`/`**, `$HOME`, or a system binary directory—exposing the wrong directory (or the entire filesystem root!) as the agent's workspace.
 2. **Two Bonus State-Isolation Catches**:
    - **Shared Composer Draft Across Threads**: [`MarkdownComposer`](lib/ui/features/chat/views/widgets/markdown_composer.dart) uses a single `TextEditingController`, so typing an unsent draft in Thread A leaks into Thread B when you switch threads.
    - **Thread Title & Workspace Locked at Session Creation**: Renaming a thread or changing its workspace directory does not refresh the running `AntigravityAgentSession`.
@@ -288,7 +287,7 @@ Now launch `/egm-brainstorm` in the same worktree conversation to design the sol
 
 ```text
 /egm-brainstorm Let's solve these issues:
-1. Add a concept of Projects (`ChatProject`) that group threads and explicitly set the working directory (`CWD`) for the Antigravity harness (safely falling back to `$HOME` instead of `/` when launched from Finder).
+1. Add a concept of Projects (`ChatProject`) that group threads and explicitly set the working directory (`CWD`) for the Antigravity harness (safely falling back to the user's home or temp directory instead of `/` when `Directory.current` is the filesystem root).
 2. Enable the OS-level command sandbox on `run_command` and add a human-in-the-loop Sandbox Escape Review UI banner so any command that sets `BypassSandbox: true` or accesses paths outside the Project's working directory pauses for explicit user Approval or Denial.
 3. Isolate unsent composer drafts per thread and recreate agent sessions when a thread's title or project working directory changes.
 ```
@@ -333,7 +332,7 @@ git tag step-03-projects-sandbox
 
 ### 3.4 — Stop & Play: Act 3 Human Verification Checklist
 
-Because Act 3 only changes Dart files in `lib/` and `test/`, you don't even need to quit the app—just press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal!
+Because Act 3 only changes Dart files in `lib/` and `test/`, you don't even need to quit the app—just press **`R`** (Hot Restart) in your running `flutter run` terminal!
 
 Test these interactive behaviours that automated tests cannot substitute for:
 
@@ -341,17 +340,17 @@ Test these interactive behaviours that automated tests cannot substitute for:
 - [ ] **Per-Thread Unsent Composer Draft Isolation**: Type `"Draft message for Thread A — do not send"` into the composer in Thread A. Click Thread B in the sidebar and confirm the composer is empty. Type `"Different draft in Thread B"`, switch back to Thread A, and verify your original unsent text is still waiting for you.
 - [ ] **In-Sandbox Auto-Approval (Happy Path)**: In a thread scoped to your `flutter_agy_a2ui_chat` project directory, ask the agent:
   ```text
-  Please run `ls -la` and tell me what files are in this project root.
+  Please list the files in this project root directory and tell me what you see.
   ```
-  Verify the command executes inside the `localharness` sandbox **without** popping up a review banner, because `ls -la` stays inside the project workspace.
-- [ ] **Live Human-in-the-Loop Sandbox Escape Review (`Deny` vs. `Approve & Run`)**: Now ask the agent to inspect a directory outside the workspace:
+  Verify the command executes inside the `localharness` sandbox **without** popping up a review banner, because the command stays inside the project workspace.
+- [ ] **Live Human-in-the-Loop Sandbox Escape Review (`Deny` vs. `Approve & Run`)**: Now ask the agent to run a command targeting a directory outside the workspace:
   ```text
-  Please run a shell command to list the files in `/tmp` (or my parent directory `..`).
+  Please run a shell command to list the files in my parent directory `..` (or the system temp directory).
   ```
   - Watch the amber **Sandbox Escape Review** banner ([`sandbox_review_banner.dart`](lib/ui/features/chat/views/widgets/sandbox_review_banner.dart)) appear at the top of the thread while the agent's turn pauses mid-flight waiting on your decision!
-  - Inspect the displayed command line, the project workspace directory, and the human-readable escape reason (e.g., `References path outside workspace (/tmp)` or `Requests BypassSandbox=true`).
+  - Inspect the displayed command line, the project workspace directory, and the human-readable escape reason (e.g., `References path outside workspace` or `Requests BypassSandbox=true`).
   - First click **Deny** and watch the agent gracefully report that permission was denied.
-  - Ask again, click **Approve & Run**, and verify the command executes and streams the `/tmp` listing back into the chat.
+  - Ask again, click **Approve & Run**, and verify the command executes and streams the directory listing back into the chat.
 
 ---
 
@@ -425,7 +424,7 @@ git tag step-04-a2ui
 
 ### 4.4 — Stop & Play: Act 4 Human Verification Checklist
 
-Press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal (or re-run `flutter run -d macos` after `flutter pub get`) and test the interactive A2UI surfaces first-hand:
+Press **`R`** (Hot Restart) in your running `flutter run` terminal (or re-run `flutter run` after `flutter pub get`) and test the interactive A2UI surfaces first-hand:
 
 - [ ] **Starter Thread Inline A2UI Surface**: Open the **A2UI Surface Showcase** starter thread and confirm the interactive `A2uiSurface` card renders cleanly below the Markdown prose, while the thread preview snippet in the left sidebar strips out the raw `<a2ui-json>` tags.
 - [ ] **Clarifying Parameter Form & Reactive Expression Binding**: Click the **Clarifying parameter form** quick-prompt chip above the composer (or ask for one):
@@ -498,7 +497,7 @@ git tag step-05-fixup
 
 ### 5.3 — Stop & Play: Final End-to-End Live Verification (`step-05-fixup`)
 
-Press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal and run this 3-turn live verification conversation against `localharness`:
+Press **`R`** (Hot Restart) in your running `flutter run` terminal and run this 3-turn live verification conversation against `localharness`:
 
 - [ ] **Turn 1 — Live A2UI v1.0 Trivia Surface Generation**:
   - Create a new thread (`+`) and send:
@@ -520,9 +519,9 @@ Press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal and 
 
 ## Appendix: Fast Switching Between Tagged Milestones
 
-Because you tagged each milestone on `main` (`step-00-scaffold` through `step-05-fixup`), you can jump the running macOS app forward or backward to any act in **under 1 second** without triggering `flutter pub get` or an Xcode rebuild.
+Because you tagged each milestone on `main` (`step-00-scaffold` through `step-05-fixup`), you can jump the running desktop app forward or backward to any act in **under 1 second** without triggering `flutter pub get` or a native runner rebuild.
 
-Keep `flutter run -d macos` running from `HEAD` (`step-05-fixup`) in Terminal A, and in Terminal B check out only the `lib/` and `test/` folders from any tag, then press **`R`** (Hot Restart) in Terminal A:
+Keep `flutter run` running from `HEAD` (`step-05-fixup`) in Terminal A, and in Terminal B check out only the `lib/` and `test/` folders from any tag, then press **`R`** (Hot Restart) in Terminal A:
 
 ```bash
 # Jump back to Act 1 (Markdown Chat UI with simulated replies):
