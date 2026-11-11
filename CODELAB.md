@@ -1,55 +1,95 @@
-# Codelab: Building a macOS Agentic Markdown & A2UI Chat App with Flutter & Antigravity SDK
+# Interactive Workshop: Building a macOS Agentic Markdown & A2UI Chat App with Flutter, Antigravity Desktop & EGM
 
-This codelab walks through building `agy_genui_demo` from scratch in **`agy`** (Google Antigravity CLI), starting from `flutter create` and progressing through 5 focused acts using `/clear` and Git tags at each milestone, followed by a live end-to-end test inside the compiled Flutter macOS desktop app. It is designed both for capturing an [`asciinema`](https://asciinema.org/) terminal recording and for live-demoing the Flutter macOS app at each tagged stage.
+Welcome! In this hands-on codelab, you will build **`flutter_agy_a2ui_chat`** from scratch using **Google Antigravity Desktop** (Antigravity 2.0), the **Antigravity Dart SDK** (`package:antigravity`), and the **Agent-to-UI (A2UI v1.0)** stack (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`).
 
-All per-session transcripts and conversation logs are archived in [`prompts/`](prompts/README.md).
+Rather than treating AI coding as a one-shot prompt lottery, we are going to practise **Spec-Driven Development (SDD)** using the **Elephant-Goldfish Model (EGM)** plugin and Antigravity Desktop's native **Git worktree** support:
 
----
+- **Plugins First (`/plugin`)**: Before writing a line of Dart, we will equip our agent with the official **Dart and Flutter** plugin and the **Elephant-Goldfish Model (EGM)** plugin.
+- **Stop & Play After Every Act**: Automated `flutter test` and `dart analyze` checks catch layout overflows and type errors, but they cannot tell you how an app *feels* on macOS. After every act, you will stop, run the desktop app, and work through a human verification checklist of behaviours that unit tests cannot easily cover.
+- **Document Baseline, Then Build via EGM Worktree PRs**: After building the initial app in Act 1, we will run `/egm-bootstrap` to generate a hierarchy of architectural `README.md` contracts. Every subsequent feature act (Acts 2–4) will run in an isolated **Antigravity Git worktree**, following the full EGM loop (`/egm-brainstorm` → `/egm-draft` → `/egm-review` → `/egm-resolve` → Implement → GitHub Pull Request).
+- **Close the Loop with `/egm-drift-report` (Act 5)**: Finally, we will audit our specifications and `README.md` contracts against the finished codebase to catch and resolve implementation drift.
 
-## Recorded Session Overview
-
-| Act / Stage | Session ID | Started | Duration | Steps | Tool Calls | Git Tag | Conversation Log |
-| :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **Act 1**: macOS Markdown Chat UI | `6ee8f6c2` | `21:10` | `0:09:54` | 49 | 25 | `step-01-markdown-chat` | [`01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md`](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md) |
-| **Act 2**: Antigravity Dart SDK Backend | `8f4aafaf` | `21:20` | `0:13:11` | 70 | 46 | `step-02-antigravity-sdk` | [`02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md`](prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md) |
-| **Act 3**: Project Workspaces & Sandbox Review | `10ad2b6c` | `21:34` | `0:32:44` | 175 | 96 | `step-03-projects-sandbox` | [`03-10ad2b6c-please-review-this-program-i-m-interested.md`](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md) |
-| **Act 4**: Generative UI with A2UI v1.0 | `ba34877d` | `22:07` | `1:16:47` | 507 | 290 | `step-04-a2ui` | [`04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md`](prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md) |
-| **Act 5**: Codebase Review & Hardening Fixups | `7407df5f` | `23:24` | `0:11:35` | 75 | 50 | `step-05-fixup` | [`05-7407df5f-please-review-this-codebase.md`](prompts/05-7407df5f-please-review-this-codebase.md) |
-| **Live Run**: In-App A2UI Trivia & Repo Audit | `7e5e8534` | `23:37` | `0:01:22` | 10 | 2 | *(live app run)* | [`06-7e5e8534-please-ask-a-multiple-choice-question.md`](prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md) |
-| **Export**: Transcript Extraction | `fd1fed76` | `23:58` | — | — | — | — | [`07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md`](prompts/07-fd1fed76-please-extract-agy-brain-transcripts-for-this.md) |
-
----
-
-## 0. Terminal & Recording Setup
-
-Start `asciinema`:
-
-```bash
-asciinema rec -i 2 agy-genui-codelab.cast
+```mermaid
+flowchart LR
+  P["Act 0: /plugin\nInstall Flutter & EGM"] --> A1["Act 1: Initial Chat UI\n+ Stop & Play\n+ /egm-bootstrap"]
+  A1 --> W["New Worktree\n(Acts 2, 3, 4)"]
+  subgraph EGM["Single-PR EGM Feature Loop (Per Worktree)"]
+    direction LR
+    B["/egm-brainstorm\nconcepts_brief.md"] --> D["/egm-draft\ndocs/designs/*.md"]
+    D --> R["/egm-review +\n/egm-resolve"]
+    R --> I["Implement + Test +\nGitHub PR"]
+  end
+  W --> EGM
+  EGM --> SP["Merge PR +\nStop & Play"]
+  SP --> A5["Act 5: /egm-drift-report\n+ Final Hardening PR"]
 ```
 
-Inside the recorded shell session, scaffold the macOS Flutter project, create the initial commit and `step-00-scaffold` tag, and launch `agy`:
+---
+
+## Act 0: Prerequisites, Scaffold & `/plugin` Exploration
+
+### 0.1 — Prerequisites
+
+Ensure you have the following installed and authenticated on your Mac:
+- **Flutter SDK** (3.24+ with macOS desktop support enabled; verify with `flutter doctor`)
+- **Xcode** & CocoaPods (for compiling the macOS desktop runner)
+- **GitHub CLI (`gh`)** authenticated via `gh auth login` (so Antigravity can push worktree branches and open GitHub Pull Requests)
+- **Google Antigravity Desktop** (Antigravity 2.0)
+
+### 0.2 — Scaffold the Project & GitHub Repository
+
+In your terminal, create a brand-new macOS Flutter project, make the initial commit, and push it to a new GitHub repository so that your worktrees have an `origin` remote to open Pull Requests against:
 
 ```bash
-flutter create agy_genui_demo --platforms=macos
-cd agy_genui_demo
-git init
+flutter create flutter_agy_a2ui_chat --platforms=macos
+cd flutter_agy_a2ui_chat
+git init -b main
 git add .
-git commit -m "Initial commit"
+git commit -m "Initial commit: Flutter macOS scaffold"
 git tag step-00-scaffold
-agy
+
+# Create a private or public GitHub repo and push main:
+gh repo create flutter_agy_a2ui_chat --private --source=. --remote=origin --push
 ```
+
+Now open **Antigravity Desktop**, click **Projects → Add Project**, and select your `flutter_agy_a2ui_chat` directory.
+
+### 0.3 — Explore `/plugin` First: Install the Flutter & EGM Plugins
+
+Before we ask the agent to build anything, let us make sure it has the right domain skills, subagents, MCP servers, and spec-driven workflows installed.
+
+In the Antigravity Desktop chat input (or via the **Skills & Customizations** sidebar item on the left), run:
+
+```text
+/plugin
+```
+
+> [!IMPORTANT]
+> **Install and enable both of these plugins before starting Act 1:**
+> 1. **Dart and Flutter (`flutter`)** — Official plugin authored by the Dart and Flutter teams.
+> 2. **Elephant-Goldfish Model (`egm`)** — Google's open-source Spec-Driven Development plugin (*"Design with an elephant. Review with a goldfish."*).
+
+Take two minutes to expand both plugins in the Customizations panel and inspect what they bundle into your workspace:
+
+| Plugin | What It Adds to Your Agent | Why It Matters for This Workshop |
+| :--- | :--- | :--- |
+| **Dart and Flutter** (`flutter`) | **25 Skills** (`flutter-apply-architecture-best-practices`, `flutter-add-widget-test`, `dart-run-static-analysis`, `flutter-fix-layout-issues`, `flutter-build-responsive-layout`, etc.), the **`flutter_a11y_agent`** subagent, hot-reload rules, and **`dart-mcp-server`**. | Gives the agent idiomatic layered Flutter architecture patterns and teaches it to run `dart analyze` and `flutter test` in its self-correction loop. |
+| **Elephant-Goldfish Model** (`egm`) | **7 Skills** (`/egm-bootstrap`, `/egm-brainstorm`, `/egm-draft`, `/egm-review`, `/egm-resolve`, `/egm-review-loop`, `/egm-drift-report`) and **9 Subagent Personas** (`egm-design`, `egm-zoom-out`, `egm-comprehension`, `egm-codebase-details`, `egm-implementation-readiness`, `egm-style`, `egm-structural`, `egm-synthesizer`, `egm-bootstrap-orchestrator`). | Lets an **Elephant** (your main stateful session) draft specs while **Goldfish** (fresh-context subagents with zero conversation memory) stress-test your designs for blind spots before you write code. |
+
+> [!TIP]
+> If the **Elephant-Goldfish Model (`egm`)** plugin does not appear in your marketplace catalogue yet, you can ask the agent in chat:
+> `Install https://github.com/google/elephant-goldfish-model`
 
 ---
 
-## Act 1: Build the macOS Markdown Chat UI (`step-01-markdown-chat`)
+## Act 1: Build the Initial macOS Markdown Chat UI & Bootstrap EGM (`step-01-markdown-chat`)
 
-- **Session**: `6ee8f6c2-c4f9-499a-8b15-c88156684819` (`0:09:54`, 49 steps, 25 tool calls)
-- **Conversation Log**: [`prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md`](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md)
+For Act 1, we will work directly on `main` (in **Local Mode**) to replace the default Flutter counter app with a rich macOS split-view Markdown chat interface powered by `flutter_markdown_plus`.
 
-Turn the default Flutter counter app into a desktop split-view Markdown chat application powered by `flutter_markdown_plus`.
+### 1.1 — Prompt: Build the Markdown Chat App
 
-### Prompt 1.1 — Build the Markdown Chat App (Step 0)
+Start a new conversation in **Local Mode** and send the following prompt:
+
 ```text
 Please build a macOS desktop Markdown chat application in this project using `flutter_markdown_plus` with the following features:
 1. A collapsible macOS split-view conversation thread sidebar with per-thread typing state, automatic thread titling, and starter threads showcasing rich Markdown.
@@ -59,333 +99,449 @@ Please build a macOS desktop Markdown chat application in this project using `fl
 5. Widget tests in `test/widget_test.dart` and macOS build/run instructions in `README.md`.
 ```
 
-#### What `agy` Investigated & Built
-1. **Skill Consultation & Dependencies**: Read the Flutter architecture (`flutter-apply-architecture-best-practices`), widget testing (`flutter-add-widget-test`), and static analysis (`dart-run-static-analysis`) skills, then ran `flutter pub add flutter_markdown_plus markdown`.
-2. **Layered Architecture**:
-   - **Domain** ([`lib/domain/models/chat_models.dart`](lib/domain/models/chat_models.dart)): Immutable `ChatMessage`, `ChatThread`, and `MessageSender` models with `isTyping` and `isAutoTitled` tracking.
-   - **Data** ([`lib/data/repositories/chat_repository.dart`](lib/data/repositories/chat_repository.dart)): Pre-populated starter threads demonstrating GitHub-Flavored Markdown (tables, fenced code blocks, blockquotes, task lists) and deterministic Markdown reply generation.
-   - **Presentation** ([`lib/ui/features/chat/view_models/chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart)): `ChangeNotifier` managing threads, active selection, sidebar collapse state, Light/Dark `ThemeMode`, live preview toggle, automatic thread titling from the first user prompt (stripping Markdown syntax), and independent per-thread typing timers.
-   - **Theme & Widgets**: Material 3 Light/Dark desktop themes and custom `MarkdownStyleSheet` builder in [`app_theme.dart`](lib/ui/core/theme/app_theme.dart), [`top_toolbar.dart`](lib/ui/features/chat/views/widgets/top_toolbar.dart), [`thread_sidebar.dart`](lib/ui/features/chat/views/widgets/thread_sidebar.dart), [`message_bubble.dart`](lib/ui/features/chat/views/widgets/message_bubble.dart) (`MarkdownBody` with `md.ExtensionSet.gitHubFlavored` and a one-click Copy Markdown button), [`markdown_composer.dart`](lib/ui/features/chat/views/widgets/markdown_composer.dart) (formatting toolbar, live preview pane, `Enter`/`NumpadEnter` send vs. `Shift+Enter` newline with macOS IME composition guard), and [`chat_screen.dart`](lib/ui/features/chat/views/chat_screen.dart).
-3. **Self-Correction During Widget Testing (Step 38)**: Running `dart format . && dart analyze && flutter test` caught a horizontal `RenderFlex` overflow in `MessageBubble`'s header `Row` when the sidebar was open on an 800px test viewport. `agy` fixed the layout in [`message_bubble.dart`](lib/ui/features/chat/views/widgets/message_bubble.dart) and re-ran the suite to green.
+#### What to Watch While Antigravity Builds Act 1
+- **Automatic Skill Consultation**: Watch the agent automatically read `flutter-apply-architecture-best-practices`, `flutter-add-widget-test`, and `dart-run-static-analysis` from the **Flutter plugin** you enabled in Act 0.
+- **Clean Layered Architecture**:
+  - **Domain** ([`lib/domain/models/chat_models.dart`](lib/domain/models/chat_models.dart)): Immutable `ChatMessage`, `ChatThread`, and `MessageSender` models.
+  - **Data** ([`lib/data/repositories/chat_repository.dart`](lib/data/repositories/chat_repository.dart)): Starter threads demonstrating GitHub-Flavored Markdown and simulated assistant replies.
+  - **Presentation** ([`lib/ui/features/chat/view_models/chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart) & [`lib/ui/features/chat/views/`](lib/ui/features/chat/views/chat_screen.dart)): `ChatViewModel` (`ChangeNotifier`), [`AppTheme`](lib/ui/core/theme/app_theme.dart), [`TopToolbar`](lib/ui/features/chat/views/widgets/top_toolbar.dart), [`ThreadSidebar`](lib/ui/features/chat/views/widgets/thread_sidebar.dart), [`MessageBubble`](lib/ui/features/chat/views/widgets/message_bubble.dart), and [`MarkdownComposer`](lib/ui/features/chat/views/widgets/markdown_composer.dart).
+- **Self-Correction via Widget Tests**: When the agent runs `flutter test`, the default 800×600 test viewport often catches subtle `RenderFlex` overflows in header rows when the sidebar is open—allowing the agent to fix its layout before you ever launch the window.
 
-### Prompt 1.2 — Commit & Tag `step-01-markdown-chat` (Step 43)
-```text
-git commit and tag as step-01-markdown-chat
-```
-- **Executed**: `git add -A && git commit -m "Build macOS desktop Markdown chat application with flutter_markdown_plus" && git tag step-01-markdown-chat`
+---
 
-### Reset Context for Act 2
-```text
-/clear
+### 1.2 — Stop & Play: Act 1 Human Verification Checklist
+
+Launch the macOS desktop app from a terminal in your project root (and leave this terminal running throughout the workshop so you can hot-restart with `R`):
+
+```bash
+flutter run -d macos
 ```
+
+Automated widget tests verify that widgets mount and callbacks fire, but they use a synthetic renderer and mocked clipboard/keyboard channels. **Test these real-world desktop behaviours yourself:**
+
+- [ ] **Window Resizing & Split-View Geometry**: Drag the macOS window edge from narrow (~650px) to wide (~1600px) and toggle the sidebar collapse button in the top toolbar. Verify the 280px sidebar transitions smoothly without text clipping or layout jumps in the message list.
+- [ ] **GitHub-Flavored Markdown Visual Fidelity (Light vs. Dark)**: Open the **Markdown Showcase** starter thread and toggle between **Light** and **Dark** Material 3 themes. Visually inspect table cell borders, inline `code` pill contrast, blockquote left borders, and fenced code block backgrounds in both colour schemes.
+- [ ] **Real macOS System Clipboard (`Copy Markdown`)**: Hover or click the **Copy Markdown** icon on a message bubble, verify the icon changes to a checkmark, and press `Cmd+V` inside the composer (or TextEdit) to confirm the raw Markdown source actually lands on the macOS system pasteboard.
+- [ ] **Physical Keyboard Shortcuts & macOS IME Composition Guard**:
+  - Type a line in the composer, press **`Shift+Enter`**, and confirm it inserts a newline rather than sending.
+  - Press **`Enter`** (and **`Numpad Enter`** if you have a full keyboard) to confirm it sends the message and **immediately restores keyboard focus** to the composer so you can keep typing without clicking the mouse.
+  - Press a macOS dead-key sequence such as **`Option+e`** followed by **`e`** (to compose `é`) and press `Enter` while the underline composition state is active—confirm the IME composition guard prevents premature sending.
+- [ ] **Formatting Toolbar Cursor Wrapping**: Highlight a word in the composer and click **Bold** (`**text**`) or **Code Block**, then toggle **Live Preview** to see the side-by-side rendered preview update as you type.
+- [ ] **Independent Per-Thread Typing Timers**: Create two new threads, send a message in Thread A, and immediately switch to Thread B before the simulated reply arrives. Verify the typing indicator stays scoped to Thread A in the sidebar and doesn't bleed into Thread B's message list.
+
+---
+
+### 1.3 — Introduce EGM: Document the Baseline Codebase with `/egm-bootstrap`
+
+Now that our initial application works and passes human inspection, we want to prepare the repository for **Spec-Driven Development**.
+
+When an AI agent (or a new human teammate) lands in a repository to design a feature, reading every `.dart` file from scratch wastes context tokens. EGM solves this with **Peanuts and Hay**:
+- **Peanuts (Leaf `README.md`s)**: Component-level `README.md` files in each leaf directory (`lib/domain/models/`, `lib/data/repositories/`, `lib/ui/features/chat/view_models/`, etc.) documenting exact file contracts, public interfaces, invariants, and side effects.
+- **Hay (Parent & Root `README.md`s)**: High-altitude architectural blueprints that roll up child contracts so agents can navigate the codebase top-down.
+
+Run the EGM bootstrap skill across your repository:
+
+```text
+/egm-bootstrap .
+```
+
+#### What Happens During `/egm-bootstrap`
+1. The root orchestrator maps your directory tree level-by-level and identifies `flutter test` / `dart analyze` from `pubspec.yaml`.
+2. It spawns parallel sub-orchestrator and Goldfish verification subagents (`egm-codebase-details`, `egm-comprehension`, `egm-style`, `egm-structural`) to generate and audit `README.md` contracts in every leaf and parent directory under `lib/` and `test/`, rolling them up into the root `README.md`.
+3. Create the `docs/designs/` directory and `docs/designs/SITEMAP.md` index if not yet present so our upcoming feature specs have a home.
+
+Once `/egm-bootstrap` finishes, review the generated `README.md` files in Antigravity Desktop's **Files Changed** pane, then ask the agent to commit, tag `step-01-markdown-chat`, and push to `main`:
+
+```text
+Please commit all changes, tag as step-01-markdown-chat, and push main to origin.
+```
+
+---
+
+## How the EGM + Git Worktree PR Loop Works (Acts 2, 3 & 4)
+
+From this point forward, **we will not code directly on `main`**. Every new feature act follows a disciplined 5-step engineering workflow in Antigravity Desktop:
+
+1. **Start a New Conversation in `New Worktree` Mode**:
+   - In Antigravity Desktop, click **New Conversation**.
+   - In the workspace selector at the bottom of the prompt box, switch from **Local** to **New worktree**.
+   - Antigravity automatically provisions an isolated Git worktree under `~/.gemini/antigravity/worktrees/flutter_agy_a2ui_chat/<feature-name>` on its own feature branch, leaving your primary `flutter_agy_a2ui_chat` checkout completely untouched.
+2. **Ideate with `/egm-brainstorm` (Elephant + 6-Lens Goldfish Swarm)**:
+   - Answer open-ended clarifying questions from the Elephant until the problem statement and constraints are sharp.
+   - Let EGM spawn its 6 parallel Goldfish brainstorming lenses (*Contrarian/YAGNI*, *Cost/Quota*, *UX/Ergonomics*, *Migration*, *Observability*, *Tech Debt*) to challenge your assumptions and write `concepts_brief.md`.
+3. **Specify with `/egm-draft` (Section-by-Section Design Doc)**:
+   - Turn `concepts_brief.md` into a formal design specification (`Overview & Goals`, `Technical Plan`, `Alternatives Considered`, `Detailed Implementation`), approving each section interactively and saving the final spec to `docs/designs/<feature>.md` (and `docs/designs/SITEMAP.md`).
+4. **Audit with `/egm-review` & `/egm-resolve` (Fresh-Context Goldfish Review)**:
+   - Run `/egm-review docs/designs/<feature>.md` so fresh-context Goldfish subagents verify your spec against the codebase and its bootstrapped `README.md` contracts.
+   - Run `/egm-resolve` to apply `PROPOSE FIX` improvements and resolve any `ESCALATE` trade-offs.
+5. **Implement, Open a GitHub PR & Stop & Play**:
+   - Ask the Elephant to implement `docs/designs/<feature>.md`, update affected component `README.md` contracts, verify `dart format . && dart analyze && flutter test`, and open a GitHub Pull Request containing both the design doc and the implementation.
+   - Merge the PR into `main`, pull `main` in your primary checkout, and **Stop & Play**!
 
 ---
 
 ## Act 2: Integrate the Antigravity Dart SDK (`step-02-antigravity-sdk`)
 
-- **Session**: `8f4aafaf-21d5-4f03-8317-baca71b7cb79` (`0:13:11`, 70 steps, 46 tool calls)
-- **Conversation Log**: [`prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md`](prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md)
+In Act 2, we replace the simulated canned replies with live streaming responses from the **Google Antigravity Dart SDK** (`package:antigravity`), which spawns the local Antigravity harness binary (`~/.antigravity/bin/localharness`).
 
-Replace the simulated canned assistant replies with live streaming responses from the Google Antigravity Dart SDK (`package:antigravity`).
+### 2.1 — Start a New Worktree & Run `/egm-brainstorm`
 
-### Prompt 2.1 — Add & Wire Up `package:antigravity` (Step 0)
+Click **New Conversation**, select **New worktree**, and start brainstorming:
+
 ```text
-Please add the `antigravity` package dependency and integrate it as the backend for the Markdown chat in this app. Update the macOS entitlements so the app can spawn the local harness, and update README.md and the widget tests.
+/egm-brainstorm Replace the simulated canned assistant replies with live streaming responses from `package:antigravity`. We need to configure macOS entitlements so the desktop app can spawn the local harness binary, stream responses incrementally per thread with cancellation support, and keep `flutter test` fast and deterministic without spawning real OS processes in widget tests.
 ```
 
-#### What `agy` Investigated & Built
-1. **SDK Inspection (`antigravity 0.18.1`)**: Located `antigravity: ^0.18.1` in `.pub-cache` and inspected `Agent`, `LocalAgentConfig`, `CustomSystemInstructions`, `ChatResponse`, `BinaryDiscovery`, `HarnessDownloader`, and `LocalConnectionStrategy`.
-2. **macOS Entitlements for `localharness` Spawning**:
-   - Discovered that `LocalConnectionStrategy` spawns `~/.antigravity/bin/localharness` via `Process.start`, reads `~/.antigravity` and environment variables (`GEMINI_API_KEY`), and opens a local loopback WebSocket plus outbound HTTPS connections.
-   - Updated both [`macos/Runner/DebugProfile.entitlements`](macos/Runner/DebugProfile.entitlements) and [`macos/Runner/Release.entitlements`](macos/Runner/Release.entitlements) to set `com.apple.security.app-sandbox` to `false` and enable both `com.apple.security.network.client` and `com.apple.security.network.server`.
-3. **Testability vs. `FakeAsync` Discovery (Step 46)**:
-   - While inspecting `package:antigravity`'s `ChatResponse.chunks`, `agy` noticed it polls internally with `await Future.delayed(const Duration(milliseconds: 5))` inside a `while` loop, and `Agent.start()` spawns an OS process—both of which would hang Flutter's `FakeAsync` widget test zone if invoked directly.
-   - Designed [`AntigravityAgentSession`](lib/data/repositories/chat_repository.dart) (`start()`, `sendPrompt()`, `stop()`) with production implementation [`LocalAntigravityAgentSession`](lib/data/repositories/chat_repository.dart) wrapping `Agent` + `LocalAgentConfig` + `CustomSystemInstructions` + `response.textStream`, and an injectable `AntigravitySessionBuilder` factory for deterministic streaming/error widget tests.
-4. **Per-Thread Streaming & Cancellation**:
-   - Updated [`ChatViewModel`](lib/ui/features/chat/view_models/chat_view_model.dart) to stream tokens incrementally into the active or background thread bubble via `_upsertAssistantMessage`, track `_activeRequestIds` to ignore stale events after cancellation, format SDK errors as Markdown alerts, and call `closeThreadSession` when a thread is deleted.
+#### Key Questions & Trade-offs to Discuss with the Elephant
+As the Elephant drills into the problem and inspects `package:antigravity` (and the bootstrapped `README.md` files from Act 1), guide the discussion around these three real-world constraints:
+1. **macOS App Sandbox vs. `localharness` Spawning**: `package:antigravity`'s `LocalConnectionStrategy` spawns `~/.antigravity/bin/localharness` via `Process.start`, reads `~/.antigravity` and environment variables (`GEMINI_API_KEY`), and opens a local loopback WebSocket plus outbound HTTPS connections. In `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`, `com.apple.security.app-sandbox` must be set to `false` with `network.client` and `network.server` enabled.
+2. **The `FakeAsync` Widget Test Trap**: Inside `package:antigravity`, `ChatResponse.chunks` polls internally using `await Future.delayed(const Duration(milliseconds: 5))` in a `while` loop, and `Agent.start()` spawns a real child process. Either of those will hang Flutter's `FakeAsync` widget test zone forever! We need a clean `AntigravityAgentSession` interface (`start()`, `sendPrompt()`, `stop()`) with a production `LocalAntigravityAgentSession` and an injectable `AntigravitySessionBuilder` factory for deterministic widget tests.
+3. **Per-Thread Streaming & Stale-Chunk Guards**: Users can switch threads or delete a thread mid-stream. `ChatViewModel` needs per-thread active request IDs so cancelled turns never append ghost tokens.
 
-### Prompt 2.2 — Commit & Tag `step-02-antigravity-sdk` (Step 66)
-```text
-git commit and tag as step-02-antigravity-sdk
-```
-- **Executed**: `git add -A && git commit -m "Integrate antigravity SDK backend and update macOS entitlements" && git tag step-02-antigravity-sdk`
+Once you approve the working hypothesis and the 6-lens Goldfish brainstorm review completes, review the generated `concepts_brief.md`.
 
-### Reset Context for Act 3
+### 2.2 — Draft the Specification (`/egm-draft`)
+
+Run:
+
 ```text
-/clear
+/egm-draft
 ```
+
+Step through the 4 interactive approval gates (`Overview & Goals`, `Technical Plan`, `Alternatives Considered`, `Detailed Implementation`) and save the finalized specification to **`docs/designs/antigravity_sdk_backend.md`**.
+
+### 2.3 — Goldfish Review & Resolution (`/egm-review` & `/egm-resolve`)
+
+Stress-test the design doc with fresh-context Goldfish subagents:
+
+```text
+/egm-review docs/designs/antigravity_sdk_backend.md
+```
+
+When the review completes, resolve the surfaced findings in `goldfish_review_report.md`:
+
+```text
+/egm-resolve
+```
+
+### 2.4 — Implement, Verify & Create the GitHub PR
+
+Once your specification in `docs/designs/antigravity_sdk_backend.md` is approved, prompt the agent to build it and open the Pull Request:
+
+```text
+Please implement the approved specification in `docs/designs/antigravity_sdk_backend.md`:
+1. Add `antigravity` to `pubspec.yaml` and update `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`.
+2. Implement `AntigravityAgentSession` and `LocalAntigravityAgentSession` in `lib/data/repositories/chat_repository.dart` and wire per-thread streaming and error formatting into `ChatViewModel`.
+3. Update `test/widget_test.dart` and affected directory `README.md` contracts, and verify `dart format . && dart analyze && flutter test` pass.
+4. Commit the design doc and implementation to this worktree branch, push to origin, and create a GitHub Pull Request with `gh pr create`.
+```
+
+Review the Pull Request on GitHub (or via `gh pr view`), merge it (`gh pr merge --merge --delete-branch`), and in your main checkout terminal pull `main` and tag the milestone:
+
+```bash
+git pull origin main
+git tag step-02-antigravity-sdk
+```
+
+---
+
+### 2.5 — Stop & Play: Act 2 Human Verification Checklist
+
+> [!WARNING]
+> **Full Rebuild Required Once for macOS Entitlements!**
+> Because Act 2 modified `macos/Runner/DebugProfile.entitlements`, pressing `R` (Hot Restart) is not enough—macOS code-signs entitlements at compile time. Stop `flutter run` with **`q`** and run `flutter run -d macos` fresh so Xcode re-signs the `.app` bundle.
+
+Once the app launches, work through this human verification checklist:
+
+- [ ] **Live Token-by-Token Streaming Cadence**: Create a new thread (`+`) and send: *"Explain in 3 short paragraphs why Dart's isolate model is great for desktop UIs."* Watch the assistant bubble grow token-by-token as `localharness` streams chunks over the loopback WebSocket, verifying smooth scroll tracking without layout jitter.
+- [ ] **Multi-Turn Session Memory Within a Thread**: Send a follow-up prompt in the *same* thread: *"Now summarise your second point in one haiku."* Confirm the agent remembers the previous turn's context because `ChatRepository` reuses the thread's `AntigravityAgentSession`.
+- [ ] **Cross-Thread Context Isolation**: Click `+` to create a second thread and ask: *"What did we just talk about?"* Confirm the new thread starts a fresh `Agent` session with zero memory of the first thread.
+- [ ] **Background Streaming While Switching Threads**: Ask a long question in Thread 1 (*"Write a comprehensive comparison of Material 3 vs Cupertino widgets with a Markdown table"*), immediately click over to Thread 2 while Thread 1 is still streaming, watch Thread 1's typing badge animate in the sidebar, and switch back to confirm the streamed Markdown table completed cleanly.
+- [ ] **Mid-Stream Thread Deletion (`stop()`)**: Start a long streaming response in a throwaway thread and click the trash icon to delete that thread mid-stream. Verify the app does not throw an unhandled exception or leak tokens into the newly selected thread.
 
 ---
 
 ## Act 3: Project Workspaces (`CWD`) & Sandbox Escape Review UI (`step-03-projects-sandbox`)
 
-- **Session**: `10ad2b6c-c2ee-4fed-aeae-d2940571099e` (`0:32:44`, 175 steps, 96 tool calls)
-- **Conversation Log**: [`prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md`](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md)
+In Act 3, we uncover a classic macOS desktop pitfall—what working directory `localharness` inherits when launched from Finder vs. the terminal—and use the EGM workflow to design and build **Project Workspaces (`CWD`)** and a human-in-the-loop **Sandbox Escape Review** gate.
 
-Investigate how `localharness` determines its working directory when launched from a macOS `.app` bundle, add **Projects** to control the workspace directory, and add a human-in-the-loop **Sandbox Escape Review** gate.
+### 3.1 — Start a New Worktree & Investigate the `CWD` Trap
 
-### Prompt 3.1 — Investigate `localharness` Initial Working Directory (Step 0)
+Click **New Conversation**, switch to **New worktree**, and start with an investigative prompt before launching `/egm-brainstorm`:
+
 ```text
-Please review this program. I'm interested in which directory the Antigravity local harness has as its initial working directory
+Please review this program and `package:antigravity`. Which directory does the Antigravity local harness use as its initial working directory when launched from `flutter run` versus when launched as a macOS `.app` bundle from Finder? Also note any other state isolation issues you spot in the current chat UI.
 ```
 
-#### Findings from `agy`'s Investigation (Step 32)
-`agy` traced the workspace initialization chain across `agy_genui_demo` and `antigravity-0.18.1`:
-1. **`workspaces: null` Defaulting**: `ChatRepository.buildAgentConfig` passed `workspaces: null` to `LocalAgentConfig`, which called `normalizeWorkspacePaths(workspaces, defaultToCwd: true)` $\rightarrow$ `[Directory.current.absolute.path]` and sent `"filesystem_workspace": { "directory": "<Directory.current.absolute.path>" }` in the WebSocket handshake.
-2. **Child Process Inheritance**: `LocalConnectionStrategy.start` called `Process.start(resolvedBinaryPath, [])` without a `workingDirectory`, so `localharness` also inherited `Directory.current`.
-3. **CLI vs. Finder `.app` Bundle Difference**:
-   - When launched via `flutter run -d macos`, `Directory.current` is the project folder (e.g. `./` in `agy_genui_demo`).
-   - When launched from Finder / Dock (`agy_genui_demo.app`), macOS `launchd` sets the process working directory to **`/`** (root), dangerously exposing `/` as the agent's workspace root.
-4. **Additional Code Review Findings**:
-   - *Thread Title Locked In at Session Creation*: `threadTitle` was only embedded into `CustomSystemInstructions` on initial session creation.
-   - *Shared Composer Draft Across Threads*: `MarkdownComposer` used a single `TextEditingController`, so typing an unsent draft in Thread A leaked into Thread B on thread switch.
+#### What the Agent Discovers
+1. **The macOS Finder `/` Root Trap**:
+   - `ChatRepository.buildAgentConfig` passes `workspaces: null` to `LocalAgentConfig`, which defaults to `[Directory.current.absolute.path]`.
+   - When launched via `flutter run -d macos`, `Directory.current` is your project folder.
+   - However, when a macOS `.app` bundle is double-clicked in Finder or the Dock, `launchd` sets the process working directory to **`/`** (the filesystem root)—dangerously exposing `/` as the agent's workspace!
+2. **Two Bonus State-Isolation Catches**:
+   - **Shared Composer Draft Across Threads**: [`MarkdownComposer`](lib/ui/features/chat/views/widgets/markdown_composer.dart) uses a single `TextEditingController`, so typing an unsent draft in Thread A leaks into Thread B when you switch threads.
+   - **Thread Title & Workspace Locked at Session Creation**: Renaming a thread or changing its workspace directory does not refresh the running `AntigravityAgentSession`.
 
-### Prompt 3.2 — Add Project Workspaces & Sandbox Escape Review UI (Step 33)
+### 3.2 — Brainstorm & Stress-Test the Design (`/egm-brainstorm`)
+
+Now launch `/egm-brainstorm` in the same worktree conversation to design the solution:
+
 ```text
-1. Add a concept of projects that set a working directory for the Antigravity harness.
-2. I'm guessing workspaceOnly enables commands that are inside the sandbox. We should add UI that allows programs to be run that want to escape the sandbox, but only after review by the user.
-3. Update README.md and add `/skills/` to `.gitignore`.
+/egm-brainstorm Let's solve these issues:
+1. Add a concept of Projects (`ChatProject`) that group threads and explicitly set the working directory (`CWD`) for the Antigravity harness (safely falling back to `$HOME` instead of `/` when launched from Finder).
+2. Enable the OS-level command sandbox on `run_command` and add a human-in-the-loop Sandbox Escape Review UI banner so any command that sets `BypassSandbox: true` or accesses paths outside the Project's working directory pauses for explicit user Approval or Denial.
+3. Isolate unsent composer drafts per thread and recreate agent sessions when a thread's title or project working directory changes.
 ```
 
-#### Deep Dive into `package:antigravity` Policies & the `localharness` Binary (Steps 34–86)
-Before asking a clarifying UI question, `agy` inspected both the Dart SDK (`policy.dart`, `capabilities.dart`, `safety_patterns.md`) and the compiled Go binary (`~/.antigravity/bin/localharness`) using `strings` and Python byte-slice inspection:
-- Verified that `workspaceOnly` only sets `workspace_containment: true` for file manipulation tools (`view_file`, `write_to_file`, `file_edit`, `find`, `grep_search`, `list_dir`)—it does **not** by itself enable or sandbox `run_command`.
-- Found that `CapabilitiesConfig(runCommand: RunCommandConfig(enableSandbox: true))` enables the OS-level `exebox` sandbox on `run_command` and exposes the `BypassSandbox` parameter (`TerminalSandboxSection`) to the model.
-- Combined `CapabilitiesConfig(runCommand: RunCommandConfig(enableSandbox: true))` with a layered policy in `ChatRepository.buildDefaultPolicies`:
-  1. `workspaceOnly` (confining file tools to the project's `workingDirectory`),
-  2. `askUser(BuiltinTools.runCommand.value, predicate: isSandboxEscapeToolCall, handler: ...)` (intercepting any `run_command` that sets `BypassSandbox: true` / `disable_sandbox: true` or references paths outside the project workspace),
-  3. `auto(handler: ...)` (auto-approving safe in-sandbox commands while routing risky commands to the user review handler), and
-  4. `allowAll()` (permitting normal in-workspace file operations and in-sandbox commands).
+#### Key Technical Discovery During Brainstorming & Drafting
+While inspecting `package:antigravity` (`policy.dart`, `capabilities.dart`) and `localharness`, notice an essential distinction that the Elephant and Goldfish reviewers will surface:
+- `PolicyConfig.workspaceOnly` **only** confines file tools (`view_file`, `write_to_file`, `file_edit`, `find`, `grep_search`, `list_dir`) to the workspace—it does **not** by itself enable sandboxing on `run_command`!
+- To sandbox shell commands and intercept escapes, you must combine **`CapabilitiesConfig(runCommand: RunCommandConfig(enableSandbox: true))`** with a layered policy in `ChatRepository.buildDefaultPolicies`:
+  1. `workspaceOnly` (confining file tools to `workingDirectory`),
+  2. `askUser(BuiltinTools.runCommand.value, predicate: isSandboxEscapeToolCall, handler: ...)` (routing any `run_command` with `BypassSandbox: true` or outside-workspace path arguments to a UI `Completer<bool>`),
+  3. `auto(handler: ...)` (auto-approving safe in-sandbox commands), and
+  4. `allowAll()`.
 
-#### Interactive Clarification (`ask_question` — Steps 88–89)
-When `agy` asked **"How should projects and conversation threads be organized in the UI?"**, Option 1 was selected:
-- `(Recommended) Projects group threads (project switcher + New Project dialog with a working directory path, filtering threads by active project)`
+### 3.3 — Draft, Review, Resolve & Implement (`/egm-draft` → `/egm-review` → PR)
 
-#### What `agy` Built (Steps 90–118)
-- Added `ChatProject` and `PendingCommandReview` models in [`chat_models.dart`](lib/domain/models/chat_models.dart).
-- Added `ChatRepository.resolveDefaultWorkingDirectory()` (falling back to `$HOME` or `Directory.systemTemp` when `Directory.current` is `/`) and `isSandboxEscapeToolCall` / `describeSandboxEscapeReason` in [`chat_repository.dart`](lib/data/repositories/chat_repository.dart).
-- Created [`project_dialog.dart`](lib/ui/features/chat/views/widgets/project_dialog.dart) (create/edit project name and workspace path with quick-pick directory presets) and [`sandbox_review_banner.dart`](lib/ui/features/chat/views/widgets/sandbox_review_banner.dart) (amber human-in-the-loop review banner showing the command line, workspace directory, escape reason, and **Deny** / **Approve & Run** buttons backed by a `Completer<bool>`).
-- Updated [`thread_sidebar.dart`](lib/ui/features/chat/views/widgets/thread_sidebar.dart) and [`top_toolbar.dart`](lib/ui/features/chat/views/widgets/top_toolbar.dart) with the project switcher, active `CWD` badge, and pending review counts.
+1. **Draft the Spec**:
+   ```text
+   /egm-draft
+   ```
+   Save the approved design to **`docs/designs/project_workspaces_and_sandbox_review.md`**.
+2. **Run the Goldfish Review & Resolution**:
+   ```text
+   /egm-review docs/designs/project_workspaces_and_sandbox_review.md
+   ```
+   Followed by:
+   ```text
+   /egm-resolve
+   ```
+3. **Implement, Test & Open the GitHub PR**:
+   ```text
+   Please implement the approved specification in `docs/designs/project_workspaces_and_sandbox_review.md`, update the relevant component `README.md` contracts and `docs/designs/SITEMAP.md`, verify `dart format . && dart analyze && flutter test` pass, and open a GitHub Pull Request for this worktree branch.
+   ```
 
-### Prompt 3.3 — Fix Issues Highlighted in the Review (Step 121)
-Address the observations surfaced during the Prompt 3.1 codebase review (per-thread composer draft isolation and session recreation on thread rename):
-```text
-Please fix issues highlighted in the review
-```
-- **What `agy` Fixed (Steps 122–164)**:
-  1. Tracked `_SessionMetadata` (`threadTitle`, `projectId`, `workingDirectory`) in [`ChatRepository`](lib/data/repositories/chat_repository.dart) and added `ChatViewModel.renameThread` so renaming a thread or changing a project's working directory cleanly stops and refreshes the thread's `AntigravityAgentSession`.
-  2. Added per-thread draft storage (`_threadDrafts` map, `draftForThread`, `updateThreadDraft`) in [`ChatViewModel`](lib/ui/features/chat/view_models/chat_view_model.dart) and synchronized [`MarkdownComposer`](lib/ui/features/chat/views/widgets/markdown_composer.dart) when `activeThreadId` changes.
-
-### Prompt 3.4 — Commit & Tag `step-03-projects-sandbox` (Step 167)
-```text
-git commit and tag as step-03-projects-sandbox
-```
-- **Executed**: `git add .gitignore README.md pubspec.yaml pubspec.lock lib/ test/ && git commit -m "Add project workspaces, sandbox-escape review UI, and per-thread drafts" && git tag step-03-projects-sandbox`
-
-### Reset Context for Act 4
-```text
-/clear
-```
-
----
-
-## Act 4: Generative UI with A2UI (`step-04-a2ui`)
-
-- **Session**: `ba34877d-c6c6-4956-96f2-c4975bb83956` (`1:16:47`, 507 steps, 290 tool calls)
-- **Conversation Log**: [`prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md`](prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md)
-
-Add Agent-to-UI (A2UI v1.0) generative UI surfaces (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`), explore the package seamlines, and implement interactive clarifying parameter forms plus bidirectional renderer RPC functions.
-
-### Prompt 4.1 — Add `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` (Step 0)
-```text
-Please add `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` to this project and integrate A2UI v1.0 surface rendering into the chat UI so `<a2ui-json>` blocks stream live interactive `A2uiSurface` widgets inline alongside Markdown.
-```
-
-#### What `agy` Investigated, Built & Debugged (Steps 1–292)
-1. **Added Dependencies**: Added `a2ui_core: ^0.5.0`, `a2ui_agent: ^0.1.0`, and `a2ui_flutter: ^0.1.0` to [`pubspec.yaml`](pubspec.yaml).
-2. **Streaming A2UI v1.0 Pipeline**:
-   - Configured `A2uiGenerator` and `A2uiRequestProcessor` in [`ChatRepository`](lib/data/repositories/chat_repository.dart) using `DirectJsonFormatFactory(progressiveKeys: {'text', 'label'})` and `CatalogConfig.fromCatalog(a2uiCatalog, version: A2uiProtocolVersion.v1_0)`, injecting `a2uiPromptSnippet` into the agent's `CustomSystemInstructions`.
-   - Managed a persistent per-thread `MessageProcessor<ComponentImplementation>` in [`ChatViewModel`](lib/ui/features/chat/view_models/chat_view_model.dart) wrapped by `StreamedAnswer<ComponentImplementation>` (`RendererState.of(renderer)`) so `<a2ui-json>` blocks (`createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`) mutate `SurfaceModel` signals reactively in real time as chunks arrive.
-   - Updated [`MessageBubble`](lib/ui/features/chat/views/widgets/message_bubble.dart) to render `AnswerTextPart` via `MarkdownBody`, `AnswerSurfacePart` via `_InlineA2uiSurfaceCard` (`A2uiSurface` + `A2uiMarkdown`), and `AnswerErrorPart` via `_InlineA2uiErrorBanner`, plus stripped `<a2ui-json>` blocks from sidebar preview snippets in [`ThreadSidebar`](lib/ui/features/chat/views/widgets/thread_sidebar.dart).
-3. **Three Subtle Bugs Diagnosed & Fixed During Testing**:
-   - **A2UI v1.0 `Text.variant` Schema Constraint (Steps 145–151)**: `BasicCatalog.v1_0` restricts `Text.variant` to `'caption'` or `'body'` (unlike v0.8 which allowed `'h5'`). Using `'h5'` caused `PayloadValidator` to reject the `updateComponents` message; changing `variant` to `'body'` with Markdown headings resolved validation.
-   - **Inline Backtick `<a2ui-json>` Tag Collision in `DirectJsonParser` (Steps 163–171)**: `a2ui_agent`'s `DirectJsonParser` intentionally strips surrounding backticks around `` `<a2ui-json>` `` to tolerate LLMs that wrap tags in inline code. Having prose text mention literal `` `<a2ui-json>` `` before the real block caused the parser to open the JSON block prematurely inside the sentence. `agy` updated the prose description to avoid literal unclosed tag tokens.
-   - **`A2uiMarkdown` Gesture & Layout Inside `OutlinedButton` (Steps 194–286)**: Inside `_InlineA2uiSurfaceCard`, wrapping `A2uiSurface` with `A2uiMarkdown` caused `Button` child `Text` components to render via `MarkdownBody` with `selectable: true` and full-width column stretching, which intercepted pointer taps and left-aligned button labels so `tester.tap` at the button's center missed the text and failed to fire `OutlinedButton.onPressed`. Setting `selectable: false` and `fitContent: true` on `A2uiMarkdown`'s `MarkdownBody` in [`message_bubble.dart`](lib/ui/features/chat/views/widgets/message_bubble.dart) fixed button centering and tap propagation.
-
-### Prompt 4.2 — Research Package Seamlines (Step 293)
-```text
-Please research the seamlines between a2ui_core, a2ui_agent and a2ui_flutter. Explain when to use each.
-```
-
-#### Architectural Summary Produced by `agy` (Step 303)
-- **`a2ui_core` (Pure Dart — Headless Protocol, State & Expression Engine)**: Owns wire messages (`AgentToRendererMessage` / `RendererToAgentMessage`), `Catalog<T, F>`, `MessageProcessor<T>`, `SurfaceGroupModel<T>`, `SurfaceModel<T>`, `DataModel`, and `NodeResolver<T>` backed by `preact_signals`.
-- **`a2ui_agent` (Pure Dart — Prompting, Stream Parsing & JSON Healing)**: Owns `A2uiGenerator`, `A2uiRequestProcessor`, `DirectJsonFormatFactory` / `ExpressFormatFactory`, `RendererState`, and `StreamedAnswer<T>`.
-- **`a2ui_flutter` (Flutter SDK — Widget Builders & Reactive `A2uiSurface`)**: Owns `ComponentImplementation` (`ComponentProps` $\rightarrow$ `Widget`), `basicCatalog()`, `A2uiSurface`, `NodeView`, and `A2uiMarkdown`.
-- **The 4 Seamlines**:
-  1. `CatalogImplementation` $\leftrightarrow$ `CatalogConfig.fromCatalog` (`a2ui_flutter` $\rightarrow$ `a2ui_core` $\rightarrow$ `a2ui_agent`)
-  2. `MessageProcessor<T>` $\leftrightarrow$ `RendererState` & `StreamedAnswer<T>` (`a2ui_core` $\leftrightarrow$ `a2ui_agent`)
-  3. `SurfaceModel<ComponentImplementation>` $\leftrightarrow$ `A2uiSurface` (`a2ui_core` $\leftrightarrow$ `a2ui_flutter`)
-  4. `onAction` & `outboundListener` $\leftrightarrow$ `ActionMessage` / `RendererFunctionResponseMessage` + `getRendererDataModel` (`a2ui_flutter` $\rightarrow$ `a2ui_core` $\rightarrow$ `a2ui_agent`)
-
-### Prompt 4.3 — Explore Capabilities for This Codebase (Step 304)
-```text
-Give me some options for utilising this capability in the current codebase
-```
-- `agy` proposed 6 options (Step 305):
-  1. Live Two-Way Action Loop (`Button` $\rightarrow$ Agent Turn + `a2uiRendererDataModel` Sync)
-  2. Custom Workspace & Developer Catalog (`CatalogImplementation` Extensions)
-  3. Persistent Split-Pane "Surface Canvas" Drawer
-  4. Self-Healing Validation Loop (Automatic LLM Repair on `AnswerErrorPart`)
-  5. Interactive Clarifying Questions & Parameter Forms (Basic Catalog)
-  6. Bidirectional Renderer RPC Functions (`FunctionImplementation`) / A2UI Express Format Toggle
-
-### Prompt 4.4 — Implement Clarifying Parameter Forms & Bidirectional Renderer RPC Functions (Step 306)
-```text
-Please implement:
-- Interactive Clarifying Questions & Parameter Forms (Basic Catalog)
-- Bidirectional Renderer RPC Functions (`FunctionImplementation`)
-```
-
-#### What `agy` Built (Steps 307–498)
-1. **Bidirectional Renderer RPC Functions ([`lib/data/catalog/renderer_rpc_functions.dart`](lib/data/catalog/renderer_rpc_functions.dart))**:
-   - Extended `basicCatalog()` via `buildAppA2uiCatalog` with 4 custom `FunctionImplementation`s registered with `AllowedCallers.rendererOrAgent`:
-     - `GetWorkspaceInfoFunction` (`getWorkspaceInfo`): Returns a `WorkspaceInfoSnapshot` map (`projectId`, `projectName`, `workingDirectory`, `activeThreadId`, `activeThreadTitle`, `themeMode`, `surfaceIds`).
-     - `ListWorkspaceFilesFunction` (`listWorkspaceFiles`): Lists files in the active project's working directory with optional `extension` and `limit` filters.
-     - `SetSurfaceDataFunction` (`setSurfaceData`): Mutates any JSON Pointer `path` in the surface's `DataContext` (`context.set(path, value)`) for instant local preset/reset `Button` `action.functionCall`s or agent-triggered `callRendererFunction` calls.
-     - `FormatParameterSummaryFunction` (`formatParameterSummary`): Reactively formats form values (`scope`, `target`, `features`, `concurrency`, `sandboxed`) into a live preview string.
-2. **Interactive Clarifying Parameter Form ([`chat_repository.dart`](lib/data/repositories/chat_repository.dart) & [`chat_screen.dart`](lib/ui/features/chat/views/chat_screen.dart))**:
-   - Added quick-prompt chips (`Clarifying parameter form` and `Run workspace RPC function`) and builders combining `Card`, `Column`, `TextField` (with `required` validation check), `ChoicePicker` (`mutuallyExclusive` chips and `multipleSelection` checkboxes), `Slider`, `CheckBox`, a live `formatParameterSummary` reactive `Text` binding, a `Use Audit Preset` `Button` invoking `setSurfaceData` locally, and a `Submit Parameters` `Button` gated by validation `checks`.
-3. **ViewModel RPC Wiring ([`chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart))**:
-   - Wired `outboundListener` on each thread's `MessageProcessor` to capture `RendererToAgentMessage`s (`RendererFunctionResponseMessage` and `CallAgentFunctionMessage`) and added `sendRpcMessageToAgent` and `callAgentFunction`.
-
-### Prompt 4.5 — Commit & Tag `step-04-a2ui` (Step 499)
-```text
-git commit and tag as step-04-a2ui
-```
-- **Executed**: `git add -A && git commit -m "Add A2UI v1.0 streaming surfaces, clarifying forms, and bidirectional RPC functions" && git tag step-04-a2ui`
-
-### Reset Context for Act 5
-```text
-/clear
-```
-
----
-
-## Act 5: Codebase Review & Hardening Fixups (`step-05-fixup`)
-
-- **Session**: `7407df5f-c580-4c1c-bf09-c63c545df255` (`0:11:35`, 75 steps, 50 tool calls)
-- **Conversation Log**: [`prompts/05-7407df5f-please-review-this-codebase.md`](prompts/05-7407df5f-please-review-this-codebase.md)
-
-Start a fresh session to audit the full codebase and resolve the surfaced issues.
-
-### Prompt 5.1 — Audit the Full Codebase (Step 0)
-```text
-please review this codebase
-```
-
-#### Issues Surfaced by `agy` (Step 33)
-1. **A2UI Surface Actions & Outbound RPC Messages Disabled in Live App**: `ChatViewModel` defaulted `forwardSurfaceActionsToAgent: false` and `forwardRpcMessagesToAgent: false` to keep unit tests manual, and `main.dart` instantiated `ChatViewModel()` without enabling them—so clicking surface buttons in the live desktop app recorded the action locally without forwarding it to `localharness`.
-2. **Stream Self-Cancellation on Multi-RPC Turns**: When `forwardRpcMessagesToAgent` was enabled, `_handleOutboundRpcMessage` synchronously called `sendRpcMessageToAgent` $\rightarrow$ `_streamAssistantTurn` while `StreamedAnswer.feed(chunk)` was still mid-stream (or when two `callRendererFunction` calls like `getWorkspaceInfo` + `listWorkspaceFiles` fired in one block), immediately cancelling the active stream subscription.
-3. **Auto-Titling Overwrote Custom Titles on Empty Threads**: `shouldAutoTitle` checked `!current.isAutoTitled || current.messages.isEmpty`, overwriting a user's custom thread rename on the first message.
-4. **Sandbox-Escape Path Heuristics Edge Cases**: `findOutsideWorkspacePathInCommand` missed `--flag=/outside/path`, `KEY=/outside/path`, `$HOME`/`$TMPDIR` variable expansions, and trailing `/..` segments, while flagging single-segment `/regex/` literals (e.g. `awk '/pattern/'`) as false-positive absolute paths.
-5. **Unbounded Synchronous Directory Walk**: `ListWorkspaceFilesFunction.execute` ran `directory.listSync()` without an entry cap or cancellation check before sorting and slicing.
-
-### Prompt 5.2 — Fix Surfaced Issues (Step 34)
-```text
-please fix issues
-```
-
-#### What `agy` Fixed (Steps 35–68)
-- Enabled `forwardSurfaceActionsToAgent: true` and `forwardRpcMessagesToAgent: true` in [`lib/main.dart`](lib/main.dart).
-- Added `_enqueueOutboundRpcForForwarding`, `_flushPendingAutoForwardRpcMessages`, and batched `sendRpcMessagesToAgent` in [`chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart) so outbound RPC messages emitted during streaming are queued and flushed together as a single `RendererToAgentMessagePayload` turn once `onDone` fires.
-- Fixed `shouldAutoTitle` in [`chat_view_model.dart`](lib/ui/features/chat/view_models/chat_view_model.dart) to check `!current.isAutoTitled`.
-- Hardened `ChatRepository.findOutsideWorkspacePathInCommand` in [`chat_repository.dart`](lib/data/repositories/chat_repository.dart) and added unit tests in [`test/widget_test.dart`](test/widget_test.dart) covering `--output=/etc/hosts`, `$HOME/.ssh/id_rsa`, `subdir/../..` vs. `subdir/..`, and `awk '/pattern/'`.
-- Bounded `ListWorkspaceFilesFunction.execute` in [`renderer_rpc_functions.dart`](lib/data/catalog/renderer_rpc_functions.dart) with `maxScannedEntries = 1000` and `cancellationSignal?.isCancelled` checks, and reset `_copied` state in [`message_bubble.dart`](lib/ui/features/chat/views/widgets/message_bubble.dart) when `widget.message.id` changes.
-
-### Prompt 5.3 — Commit & Tag `step-05-fixup` (Step 69)
-```text
-git commit and tag as step-05-fixup
-```
-- **Executed**: `git add -A && git commit -m "Fix A2UI RPC batching, auto-forwarding, thread auto-titling, and sandbox path heuristics" && git tag step-05-fixup`
-
-### Finish the CLI Recording
-Exit `agy` (`Ctrl+D` twice or `/exit`) and stop `asciinema` (`Ctrl+D` or `exit`).
-
----
-
-## Live Verification Session: Running the macOS App End-to-End
-
-- **Session**: `7e5e8534a057467540d3cd248b229b19` (`0:01:22`, 10 steps, 2 tool calls, recorded under `~/.gemini/antigravity/brain/` by the app's spawned `localharness`)
-- **Conversation Log**: [`prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md`](prompts/06-7e5e8534-please-ask-a-multiple-choice-question.md)
-
-When the completed Flutter macOS desktop app was launched (`flutter run -d macos`), it spawned `localharness` in the `agy_genui_demo` project workspace (`./`) and executed a live 3-turn verification conversation:
-
-1. **Turn 1 — Interactive A2UI v1.0 Multiple-Choice Trivia Surface (Steps 0–1)**:
-   - **User Prompt in App**: `Please ask a multiple choice question`
-   - **Live Agent Response**: Streamed a Markdown header (`### 🧠 Computer Science Trivia`) followed by an inline `<a2ui-json>` v1.0 surface (`trivia-question-surface`) containing a `Card`, `ChoicePicker` (`variant: "mutuallyExclusive"` with 4 programming language options bound to `/trivia/answer`), and a `Submit Answer` `Button` gated by a `@call: "required"` validation check.
-2. **Turn 2 — Automatic Two-Way A2UI Action & DataModel Round-Trip (Steps 2–3)**:
-   - Selecting **Java** in the `A2uiSurface` `ChoicePicker` and clicking **Submit Answer** automatically dispatched the `ActionMessage` + `a2uiRendererDataModel` back to `localharness` (verifying the Act 5 `forwardSurfaceActionsToAgent: true` fix):
-     ```json
-     {
-       "a2ui": {
-         "messages": [{
-           "version": "1.0",
-           "action": {
-             "name": "submitAnswer",
-             "surfaceId": "trivia-question-surface",
-             "sourceComponentId": "submitButton",
-             "context": { "selected": ["java"] },
-             "userMessage": "Submitting trivia answer"
-           }
-         }]
-       },
-       "metadata": {
-         "a2uiRendererDataModel": {
-           "version": "1.0",
-           "surfaces": {
-             "showcase-surface": { "streamInline": true },
-             "trivia-question-surface": { "trivia": { "answer": ["java"] } }
-           }
-         }
-       }
-     }
-     ```
-   - **Live Agent Response**: Confirmed `### 🎉 Correct! That is right! **Java** is the correct answer!` and explained the history of Oak $\rightarrow$ Java (1991–1995).
-3. **Turn 3 — Sandboxed Workspace Inspection & Live Clarifying Parameter Form (Steps 4–9)**:
-   - **User Prompt in App**: `Please review this codebase`
-   - **Live Agent Actions**: Executed `ls -la` and `find lib -maxdepth 3 -not -path '*/.*'` inside the `localharness` sandbox (auto-approved without requiring a sandbox-escape prompt because both commands stayed within the project workspace), summarized the `agy_genui_demo` architecture, and emitted an interactive `<a2ui-json>` v1.0 **Codebase Review Clarifying Parameter Form** (`TextField` for `/review/scope`, `ChoicePicker` chips for `/review/target` and `/review/features`, `Slider` for `/review/concurrency`, `CheckBox` for `/review/sandboxed`, a reactive `@call: "formatParameterSummary"` preview, and a `Start Codebase Review 🔍` `Button` gated by `@call: "required"`).
-
----
-
-## Live-Demo Guide: Switching Between Tagged Milestones
-
-Each milestone is tagged in Git so you can move the app forward or backward alongside your `asciinema` playback:
-
-| Git Tag | Act | Session Log | What to Demo Live in the macOS App |
-| :--- | :---: | :--- | :--- |
-| `step-00-scaffold` | Setup | — | Default Flutter counter app (`flutter create --platforms=macos`) |
-| `step-01-markdown-chat` | Act 1 | [`01-6ee8f6c2`](prompts/01-6ee8f6c2-please-build-a-macos-desktop-markdown-chat.md) | Split-view thread sidebar, Markdown composer toolbar, live preview, Light/Dark theme, simulated replies |
-| `step-02-antigravity-sdk` | Act 2 | [`02-8f4aafaf`](prompts/02-8f4aafaf-please-add-the-antigravity-package-dependency-and.md) | Real streaming Gemini responses via `package:antigravity` (`localharness`) and macOS entitlement setup |
-| `step-03-projects-sandbox` | Act 3 | [`03-10ad2b6c`](prompts/03-10ad2b6c-please-review-this-program-i-m-interested.md) | Grouping threads by **Projects** (`CWD`), per-thread composer drafts, and the **Approve & Run / Deny** sandbox-escape review card |
-| `step-04-a2ui` | Act 4 | [`04-ba34877d`](prompts/04-ba34877d-please-add-a2ui-core-a2ui-agent-and.md) | Streaming inline `<a2ui-json>` v1.0 surfaces, interactive clarifying parameter forms (`ChoicePicker`, `CheckBox`, `TextField`), and bidirectional RPCs (`getWorkspaceInfo`, `listWorkspaceFiles`, `callAgentFunction`) |
-| `step-05-fixup` | Act 5 | [`05-7407df5f`](prompts/05-7407df5f-please-review-this-codebase.md) | Automatic A2UI action & batched outbound RPC forwarding to the agent, hardened sandbox-escape path heuristics, preserved custom thread titles, and bounded workspace directory scans |
-
-### Instant (<1s) Hot-Restart Trick During a Live Talk
-Because `macos/Runner/*.entitlements` and all package dependencies are already configured when you launch `flutter run -d macos` from `HEAD` (`step-05-fixup`), you can switch the Dart code in `lib/` and `test/` to any tag **without** modifying `pubspec.yaml` or `macos/`—avoiding `flutter pub get` and Xcode rebuilds:
+Merge the Pull Request into `main`, pull `main` in your primary checkout, and tag `step-03-projects-sandbox`:
 
 ```bash
-# 1. Start the app once from the latest commit in Terminal A:
-flutter run -d macos
+git pull origin main
+git tag step-03-projects-sandbox
+```
 
-# 2. In Terminal B, load any milestone's Dart code into the working tree:
+---
+
+### 3.4 — Stop & Play: Act 3 Human Verification Checklist
+
+Because Act 3 only changes Dart files in `lib/` and `test/`, you don't even need to quit the app—just press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal!
+
+Test these interactive behaviours that automated tests cannot substitute for:
+
+- [ ] **Project Switcher & Quick-Pick Directory Presets**: Click the Project selector in the sidebar (or top toolbar), open the **New Project** dialog ([`project_dialog.dart`](lib/ui/features/chat/views/widgets/project_dialog.dart)), test the quick-pick directory chips (Workspace, Home, Temp), and verify that switching projects filters the thread list and updates the active `CWD` badge in the top toolbar.
+- [ ] **Per-Thread Unsent Composer Draft Isolation**: Type `"Draft message for Thread A — do not send"` into the composer in Thread A. Click Thread B in the sidebar and confirm the composer is empty. Type `"Different draft in Thread B"`, switch back to Thread A, and verify your original unsent text is still waiting for you.
+- [ ] **In-Sandbox Auto-Approval (Happy Path)**: In a thread scoped to your `flutter_agy_a2ui_chat` project directory, ask the agent:
+  ```text
+  Please run `ls -la` and tell me what files are in this project root.
+  ```
+  Verify the command executes inside the `localharness` sandbox **without** popping up a review banner, because `ls -la` stays inside the project workspace.
+- [ ] **Live Human-in-the-Loop Sandbox Escape Review (`Deny` vs. `Approve & Run`)**: Now ask the agent to inspect a directory outside the workspace:
+  ```text
+  Please run a shell command to list the files in `/tmp` (or my parent directory `..`).
+  ```
+  - Watch the amber **Sandbox Escape Review** banner ([`sandbox_review_banner.dart`](lib/ui/features/chat/views/widgets/sandbox_review_banner.dart)) appear at the top of the thread while the agent's turn pauses mid-flight waiting on your decision!
+  - Inspect the displayed command line, the project workspace directory, and the human-readable escape reason (e.g., `References path outside workspace (/tmp)` or `Requests BypassSandbox=true`).
+  - First click **Deny** and watch the agent gracefully report that permission was denied.
+  - Ask again, click **Approve & Run**, and verify the command executes and streams the `/tmp` listing back into the chat.
+
+---
+
+## Act 4: Interactive Agent-to-UI Surfaces with A2UI v1.0 (`step-04-a2ui`)
+
+Markdown is great for prose, tables, and code blocks, but when an agent needs to collect structured parameters or present interactive controls, static text forces a clunky back-and-forth guessing game. In Act 4, we integrate **A2UI v1.0** (`a2ui_core`, `a2ui_agent`, `a2ui_flutter`) so the agent can stream live, reactive Flutter UI surfaces inline alongside Markdown.
+
+### 4.1 — Start a New Worktree & Explore the A2UI Package Seamlines
+
+Click **New Conversation**, choose **New worktree**, and start by asking the Elephant to research the three A2UI packages before we brainstorm our design:
+
+```text
+Please research `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` (in pub.dev / `.pub-cache`). Explain the architectural seamlines between the three packages and give me options for utilising A2UI v1.0 in our current codebase.
+```
+
+#### Understanding the 3 A2UI Packages & 4 Seamlines
+- **`a2ui_core` (Pure Dart — Headless Protocol, State & Expression Engine)**: Owns the wire messages (`AgentToRendererMessage` / `RendererToAgentMessage`), `Catalog<T, F>`, `MessageProcessor<T>`, `SurfaceGroupModel<T>`, `SurfaceModel<T>`, `DataModel`, and `NodeResolver<T>` backed by `preact_signals`.
+- **`a2ui_agent` (Pure Dart — Prompting, Stream Parsing & JSON Healing)**: Owns `A2uiGenerator` (system prompt schema injection), `DirectJsonFormatFactory` (streaming `<a2ui-json>` parser & JSON healer), `RendererState`, and `StreamedAnswer<T>`.
+- **`a2ui_flutter` (Flutter SDK — Widget Builders & Reactive `A2uiSurface`)**: Owns `ComponentImplementation` (`ComponentProps` → `Widget`), `basicCatalog()`, `A2uiSurface`, `NodeView`, and `A2uiMarkdown`.
+
+### 4.2 — Brainstorm the A2UI v1.0 Integration (`/egm-brainstorm`)
+
+Launch `/egm-brainstorm` in your worktree session to scope our A2UI v1.0 capabilities:
+
+```text
+/egm-brainstorm Let's integrate `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` (A2UI v1.0) into the chat app with three capabilities:
+1. Inline Streaming A2UI v1.0 Surfaces: Parse `<a2ui-json>` blocks via `StreamedAnswer` and `MessageProcessor` so `createSurface`, `updateComponents`, `updateDataModel`, and `deleteSurface` messages render reactive `A2uiSurface` cards inline inside `MessageBubble` alongside Markdown (and strip raw `<a2ui-json>` tags from sidebar thread previews).
+2. Bidirectional Renderer RPC Functions (`FunctionImplementation`): Extend `basicCatalog()` with custom functions callable by both the renderer and the agent (`getWorkspaceInfo`, `listWorkspaceFiles`, `setSurfaceData`, and `formatParameterSummary`).
+3. Interactive Clarifying Parameter Forms: Add quick-prompt chips and builders showcasing `Card`, `TextField` (with `required` validation), `ChoicePicker` (`mutuallyExclusive` and `multipleSelection`), `Slider`, `CheckBox`, a live reactive `formatParameterSummary` preview, a local `Use Audit Preset` button calling `setSurfaceData`, and a validation-gated `Submit Parameters` button.
+```
+
+#### Three Classic A2UI v1.0 Pitfalls to Capture in Your Spec
+Make sure your `concepts_brief.md` and `docs/designs/a2ui_interactive_surfaces.md` explicitly call out these three nuances so neither the agent nor future maintainers trip over them:
+1. **A2UI v1.0 `Text.variant` Schema Restriction**: Unlike v0.8 (which allowed `'h5'`), `BasicCatalog.v1_0` restricts `Text.variant` to `'caption'` or `'body'`. Using `'h5'` causes `PayloadValidator` to reject the `updateComponents` payload—use `variant: 'body'` with Markdown headings (`### Heading`) instead.
+2. **No Unclosed Literal `` `<a2ui-json>` `` Tokens in Prose**: `a2ui_agent`'s `DirectJsonParser` intentionally strips surrounding backticks around `` `<a2ui-json>` `` to tolerate LLMs that wrap tags in inline code. Mentioning a literal unclosed `` `<a2ui-json>` `` token in prose before the real block opens the JSON parser prematurely inside the sentence!
+3. **`A2uiMarkdown` Gesture & Width Inside `OutlinedButton`**: Wrapping `A2uiSurface` with `A2uiMarkdown` renders `Button` child `Text` labels via `MarkdownBody`. You must configure `MarkdownBody` inside `A2uiMarkdown` with `selectable: false` and `fitContent: true` so it does not stretch full-width or swallow pointer taps meant for `OutlinedButton.onPressed`.
+
+### 4.3 — Draft, Review, Resolve & Implement (`/egm-draft` → `/egm-review` → PR)
+
+1. **Draft the Specification**:
+   ```text
+   /egm-draft
+   ```
+   Save the finalized design to **`docs/designs/a2ui_interactive_surfaces.md`**.
+2. **Run the Goldfish Review & Resolution**:
+   ```text
+   /egm-review docs/designs/a2ui_interactive_surfaces.md
+   ```
+   Followed by:
+   ```text
+   /egm-resolve
+   ```
+3. **Implement, Test & Open the GitHub PR**:
+   ```text
+   Please implement the approved specification in `docs/designs/a2ui_interactive_surfaces.md`:
+   1. Add `a2ui_core`, `a2ui_agent`, and `a2ui_flutter` to `pubspec.yaml`.
+   2. Implement the custom `FunctionImplementation`s in `lib/data/catalog/renderer_rpc_functions.dart`.
+   3. Integrate `A2uiGenerator`, `StreamedAnswer`, `MessageProcessor`, and inline `A2uiSurface` rendering across `ChatRepository`, `ChatViewModel`, `MessageBubble`, `ThreadSidebar`, and `ChatScreen`.
+   4. Add comprehensive widget tests in `test/widget_test.dart`, update component `README.md` contracts and `docs/designs/SITEMAP.md`, verify `dart format . && dart analyze && flutter test` pass, and open a GitHub Pull Request.
+   ```
+
+Merge the Pull Request into `main`, pull `main` in your primary checkout, run `flutter pub get`, and tag `step-04-a2ui`:
+
+```bash
+git pull origin main
+flutter pub get
+git tag step-04-a2ui
+```
+
+---
+
+### 4.4 — Stop & Play: Act 4 Human Verification Checklist
+
+Press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal (or re-run `flutter run -d macos` after `flutter pub get`) and test the interactive A2UI surfaces first-hand:
+
+- [ ] **Starter Thread Inline A2UI Surface**: Open the **A2UI Surface Showcase** starter thread and confirm the interactive `A2uiSurface` card renders cleanly below the Markdown prose, while the thread preview snippet in the left sidebar strips out the raw `<a2ui-json>` tags.
+- [ ] **Clarifying Parameter Form & Reactive Expression Binding**: Click the **Clarifying parameter form** quick-prompt chip above the composer (or ask for one):
+  - Clear the **Target Path / Package Scope** `TextField` and verify the red required-validation message appears and disables/gates the **Submit Parameters** button.
+  - Toggle the **Focus Area** single-select `ChoicePicker` chips, check/uncheck **Checks to Run** multi-select checkboxes, drag the **Concurrency** `Slider`, and toggle the **Sandboxed** `CheckBox`—watching the **Live Summary** text (`@call: "formatParameterSummary"`) recompute instantaneously on every pointer event via `preact_signals` without an LLM round-trip!
+  - Click **Use Audit Preset** (`@call: "setSurfaceData"`) and verify all form controls snap to the preset values immediately.
+- [ ] **Bidirectional Renderer RPC Inspection**: Click the **Run workspace RPC function** quick-prompt chip to watch the surface invoke `getWorkspaceInfo` and `listWorkspaceFiles` against your active `ChatProject` workspace.
+- [ ] **Live A2UI Surface Prompt (And a Cliffhanger!)**: Create a new thread and ask the live `localharness` agent:
+  ```text
+  Please ask me a multiple choice computer science trivia question using an interactive A2UI v1.0 surface with a ChoicePicker and a Submit Answer button.
+  ```
+  - Watch the live `<a2ui-json>` surface stream in progressively (`DirectJsonFormatFactory` healing partial JSON as chunks arrive).
+  - Select an answer in the `ChoicePicker` and click **Submit Answer**.
+  - **Look closely at what happens when you click the button**: Depending on how `ChatViewModel` was wired for unit test determinism vs. live app defaults, does clicking **Submit Answer** record the action locally, or does it automatically send a follow-up turn to `localharness`? And what happens if a single streaming response emits *two* `callRendererFunction` RPC calls back-to-back? Let us use `/egm-drift-report` in Act 5 to find out!
+
+---
+
+## Act 5: Detecting & Resolving Drift with `/egm-drift-report` (`step-05-fixup`)
+
+In any fast-moving project, subtle gaps inevitably open up between what the design documents in `docs/designs/` promised, what the component `README.md` contracts claim, and how the live codebase actually behaves in production.
+
+Instead of guessing where those gaps are, we will start one final **New Worktree** session in Antigravity Desktop and run EGM's **`/egm-drift-report`** skill alongside a holistic codebase audit.
+
+### 5.1 — Start a New Worktree & Run `/egm-drift-report`
+
+Click **New Conversation**, select **New worktree**, and run:
+
+```text
+/egm-drift-report docs/designs/
+```
+
+Once `/egm-drift-report` generates `{YYYY-MM-DD}_DRIFT_REPORT.md` comparing `docs/designs/*.md` against `lib/`, follow up in the same session to audit the component `README.md` contracts and check for any live-runtime edge cases:
+
+```text
+Please also check our component `README.md` files for drift and review the full codebase for any live-app edge cases around two-way A2UI action/RPC forwarding, thread auto-titling, and sandbox-escape path heuristics.
+```
+
+#### Classic Drift & Edge-Case Findings Surfaced in Act 5
+1. **Two-Way A2UI Action & Outbound RPC Forwarding Disabled in `main.dart`**:
+   - If `ChatViewModel` defaulted `forwardSurfaceActionsToAgent: false` and `forwardRpcMessagesToAgent: false` to keep unit tests manual—and [`lib/main.dart`](lib/main.dart) instantiated `ChatViewModel()` without enabling them—clicking an `A2uiSurface` button in the live desktop app only recorded the action locally instead of dispatching the `ActionMessage` + `a2uiRendererDataModel` back to `localharness` as specified in the Act 4 design!
+2. **Stream Self-Cancellation on Multi-RPC Turns**:
+   - When `forwardRpcMessagesToAgent: true` is enabled and a single `<a2ui-json>` block triggers two `callRendererFunction` calls (such as `getWorkspaceInfo` + `listWorkspaceFiles`), synchronously starting a new agent turn inside `outboundListener` while `StreamedAnswer.feed(chunk)` is still mid-stream cancels the active stream! Outbound RPC responses emitted while `_streamingThreadIds` is active must be queued and flushed together as a single batched `RendererToAgentMessagePayload` turn inside `onDone`.
+3. **Custom Thread Titles Overwritten on First Prompt**:
+   - If a user renames a new empty thread before sending their first message, `shouldAutoTitle` must check `!current.isAutoTitled` so it never overwrites a user's custom title.
+4. **Sandbox-Escape Path Heuristics Edge Cases**:
+   - `ChatRepository.findOutsideWorkspacePathInCommand` should catch `--flag=/outside/path`, `KEY=/outside/path`, `$HOME`/`$TMPDIR` expansions, and `subdir/../..` escapes, while avoiding false positives on single-segment `awk '/pattern/'` regex literals.
+5. **Bounded Workspace File Scans**:
+   - `ListWorkspaceFilesFunction.execute` should bound `directory.listSync()` (e.g., `maxScannedEntries = 1000`) and check `cancellationSignal?.isCancelled`.
+
+### 5.2 — Reconcile the Codebase & Documentation, Re-Verify Drift & Open the Final PR
+
+Prompt the agent to fix all surfaced code and documentation discrepancies and re-run `/egm-drift-report` until zero drift remains:
+
+```text
+Please reconcile all findings from the drift report and codebase review:
+1. Enable `forwardSurfaceActionsToAgent: true` and `forwardRpcMessagesToAgent: true` in `lib/main.dart` and batch outbound RPC responses emitted during streaming so they flush together on stream completion in `ChatViewModel`.
+2. Fix any thread auto-titling, sandbox path heuristic, and bounded directory scan edge cases, and add unit/widget regression tests in `test/widget_test.dart`.
+3. Update `docs/designs/*.md` and all directory `README.md` contracts so the documentation and implementation match 100%, then re-run `/egm-drift-report docs/designs/` to confirm "No drift detected."
+4. Commit all changes, push this worktree branch, and open a GitHub Pull Request.
+```
+
+Merge the final Pull Request on GitHub, pull `main` in your primary checkout, and tag `step-05-fixup`:
+
+```bash
+git pull origin main
+git tag step-05-fixup
+```
+
+---
+
+### 5.3 — Stop & Play: Final End-to-End Live Verification (`step-05-fixup`)
+
+Press **`R`** (Hot Restart) in your running `flutter run -d macos` terminal and run this 3-turn live verification conversation against `localharness`:
+
+- [ ] **Turn 1 — Live A2UI v1.0 Trivia Surface Generation**:
+  - Create a new thread (`+`) and send:
+    ```text
+    Please ask a multiple choice question
+    ```
+  - Verify the agent streams a Markdown heading followed by an inline `<a2ui-json>` v1.0 surface containing a `Card`, a `ChoicePicker` (`variant: "mutuallyExclusive"`), and a **Submit Answer** `Button` gated by `@call: "required"`.
+- [ ] **Turn 2 — Automatic Two-Way A2UI Action & DataModel Round-Trip**:
+  - Click your chosen option in the `ChoicePicker` and click **Submit Answer**.
+  - Verify that **without typing anything in the composer**, clicking the surface button automatically dispatches the `ActionMessage` and `a2uiRendererDataModel` JSON payload back to `localharness`, and the agent streams a follow-up reply grading your answer!
+- [ ] **Turn 3 — Sandboxed Workspace Inspection + Live Clarifying Parameter Form**:
+  - In the same thread, send:
+    ```text
+    Please review this codebase
+    ```
+  - Watch the agent run in-workspace shell/file inspection commands inside the `localharness` sandbox (auto-approved because they stay inside your active Project's `CWD`), summarise the architecture using your EGM `README.md` hierarchy, and emit an interactive A2UI clarifying parameter form to scope the review.
+
+---
+
+## Appendix: Fast Switching Between Tagged Milestones
+
+Because you tagged each milestone on `main` (`step-00-scaffold` through `step-05-fixup`), you can jump the running macOS app forward or backward to any act in **under 1 second** without triggering `flutter pub get` or an Xcode rebuild.
+
+Keep `flutter run -d macos` running from `HEAD` (`step-05-fixup`) in Terminal A, and in Terminal B check out only the `lib/` and `test/` folders from any tag, then press **`R`** (Hot Restart) in Terminal A:
+
+```bash
+# Jump back to Act 1 (Markdown Chat UI with simulated replies):
 git clean -fd lib test && git checkout step-01-markdown-chat -- lib test
-# Then press 'R' (Hot Restart) in Terminal A!
+# Press 'R' in Terminal A!
 
-# Jump to Act 3 (Projects & Sandbox Escape Review UI):
+# Jump to Act 2 (Live Antigravity SDK streaming):
+git clean -fd lib test && git checkout step-02-antigravity-sdk -- lib test
+# Press 'R' in Terminal A!
+
+# Jump to Act 3 (Project Workspaces & Sandbox Escape Review UI):
 git clean -fd lib test && git checkout step-03-projects-sandbox -- lib test
 # Press 'R' in Terminal A!
 
-# Return to the latest state (step-05-fixup):
+# Jump to Act 4 (A2UI v1.0 Surfaces, Forms & Bidirectional RPCs):
+git clean -fd lib test && git checkout step-04-a2ui -- lib test
+# Press 'R' in Terminal A!
+
+# Return to the latest state (Act 5 — Drift-reconciled & hardened):
 git clean -fd lib test && git checkout main -- lib test
 # Press 'R' in Terminal A!
 ```
